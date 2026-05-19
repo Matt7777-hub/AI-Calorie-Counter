@@ -1,0 +1,357 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elite Nutrition Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        surface: '#1e1e1e',
+                        primary: '#bb86fc',
+                        secondary: '#03dac6',
+                        error: '#cf6679',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        
+        .glass-panel {
+            background: rgba(30, 30, 30, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .progress-bar { transition: width 0.5s ease-in-out; }
+        
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #bb86fc;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="antialiased pb-24">
+
+    <!-- App Container -->
+    <div class="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl">
+        
+        <!-- Header -->
+        <header class="p-5 flex justify-between items-center sticky top-0 z-10 glass-panel">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    Elite Coach
+                    <i id="syncIcon" class="fas fa-cloud-upload-alt text-xs text-secondary opacity-50"></i>
+                </h1>
+                <p class="text-xs text-gray-400" id="currentDate">Today</p>
+            </div>
+            <button class="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-primary shadow-lg border border-gray-700" onclick="window.showSettings()">
+                <i class="fas fa-user-cog"></i>
+            </button>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="flex-1 p-4 space-y-6">
+            
+            <!-- Calorie Ring / Summary -->
+            <div class="bg-surface rounded-3xl p-6 shadow-lg border border-gray-800 flex flex-col items-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
+                <h2 class="text-sm text-gray-400 font-medium mb-1">CALORIES REMAINING</h2>
+                <div class="text-5xl font-extrabold my-2 text-white" id="calsRemaining">...</div>
+                
+                <div class="flex justify-between w-full mt-4 text-xs text-gray-400 px-2">
+                    <div class="text-center">
+                        <div class="text-white font-bold text-sm" id="calsGoal">-</div>
+                        <div>Base</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-secondary font-bold text-sm" id="activeBonus">+0</div>
+                        <div>Active Bonus</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-error font-bold text-sm" id="calsEaten">0</div>
+                        <div>Eaten</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Macros Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-blue-400 font-medium">Protein</span>
+                        <span class="text-white"><span id="proteinCurrent">0</span> / <span id="proteinGoal" class="text-gray-500">-</span></span>
+                    </div>
+                    <div class="w-full bg-gray-800 rounded-full h-2">
+                        <div id="proteinBar" class="bg-blue-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-yellow-400 font-medium">Carbs</span>
+                        <span class="text-white"><span id="carbsCurrent">0</span> / <span id="carbsGoal" class="text-gray-500">-</span></span>
+                    </div>
+                    <div class="w-full bg-gray-800 rounded-full h-2">
+                        <div id="carbsBar" class="bg-yellow-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-red-400 font-medium">Fats</span>
+                        <span class="text-white"><span id="fatsCurrent">0</span> / <span id="fatsGoal" class="text-gray-500">-</span></span>
+                    </div>
+                    <div class="w-full bg-gray-800 rounded-full h-2">
+                        <div id="fatsBar" class="bg-red-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-purple-400 font-medium">Sugar</span>
+                        <span class="text-white"><span id="sugarCurrent">0</span> / <span id="sugarGoal" class="text-gray-500">-</span></span>
+                    </div>
+                    <div class="w-full bg-gray-800 rounded-full h-2">
+                        <div id="sugarBar" class="bg-purple-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biometrics Input -->
+            <div class="bg-surface rounded-2xl p-4 border border-gray-800 flex gap-4">
+                <div class="flex-1">
+                    <label class="text-xs text-gray-400 block mb-1"><i class="fas fa-shoe-prints mr-1"></i> Steps Today</label>
+                    <input type="number" id="stepInput" placeholder="e.g. 5000" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-primary transition-colors" onchange="window.updateSteps()">
+                </div>
+                <div class="flex-1">
+                    <label class="text-xs text-gray-400 block mb-1"><i class="fas fa-weight mr-1"></i> Log Weight (kg)</label>
+                    <input type="number" step="0.1" id="weightInput" placeholder="e.g. 85.5" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-primary transition-colors" onchange="window.updateWeight()">
+                </div>
+            </div>
+
+            <!-- Food Log List -->
+            <div class="mt-6">
+                <h3 class="text-lg font-bold mb-3 flex items-center justify-between">
+                    Today's Logs
+                    <button class="text-xs text-gray-400 py-1 px-2 rounded hover:bg-gray-800" onclick="window.clearLogs()">Clear All</button>
+                </h3>
+                <div id="logContainer" class="space-y-3 pb-10">
+                    <div class="text-center text-gray-500 text-sm py-4 italic" id="emptyLogMsg">No food logged today.</div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Fixed Bottom Input Area -->
+        <div class="fixed bottom-0 left-0 right-0 glass-panel border-t border-gray-800 p-4 pb-safe sm:max-w-md sm:mx-auto">
+            <div id="imagePreviewContainer" class="hidden mb-2 relative inline-block">
+                <img id="imagePreview" src="" class="h-20 w-20 object-cover rounded-lg border border-gray-600">
+                <button onclick="window.clearImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="flex items-end gap-2">
+                <div class="relative flex-1">
+                    <textarea id="foodInput" rows="1" class="w-full bg-surface border border-gray-700 rounded-2xl py-3 pl-4 pr-12 text-white outline-none focus:border-primary transition-colors resize-none overflow-hidden" placeholder="Describe food..." oninput="window.autoResize(this)"></textarea>
+                    
+                    <input type="file" id="cameraInput" accept="image/*" class="hidden" onchange="window.handleImageSelection(event)">
+                    <button onclick="document.getElementById('cameraInput').click()" class="absolute right-2 bottom-2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
+                        <i class="fas fa-camera text-lg"></i>
+                    </button>
+                </div>
+                <button id="submitBtn" onclick="window.logFood()" class="bg-primary text-dark rounded-2xl h-[46px] px-5 font-bold flex items-center justify-center hover:bg-opacity-90 transition-all shadow-[0_0_15px_rgba(187,134,252,0.3)]">
+                    <i class="fas fa-paper-plane" id="submitIcon"></i>
+                    <div class="loader hidden" id="submitLoader"></div>
+                </button>
+            </div>
+            <div id="apiErrorMsg" class="text-error text-xs mt-2 hidden text-center"></div>
+        </div>
+
+        <!-- Settings / Profile Setup Modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex-col justify-end">
+            <div class="bg-surface rounded-t-3xl p-6 transform transition-transform border-t border-gray-700 max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">Personal Profile</h2>
+                    <button onclick="window.hideSettings()" id="closeSettingsBtn" class="text-gray-400"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                
+                <p class="text-xs text-gray-400 mb-4">We use the Mifflin-St Jeor equation to calculate your precise metabolic rate and tailor your macros to your specific goal.</p>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400">Age</label>
+                            <input type="number" id="profAge" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Gender</label>
+                            <select id="profGender" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Height (cm)</label>
+                            <input type="number" id="profHeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Weight (kg)</label>
+                            <input type="number" step="0.1" id="profWeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400">Activity Level</label>
+                        <select id="profActivity" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
+                            <option value="1.2">Sedentary (Office job, no exercise)</option>
+                            <option value="1.375">Lightly Active (Exercise 1-3 days/wk)</option>
+                            <option value="1.55">Moderately Active (Exercise 3-5 days/wk)</option>
+                            <option value="1.725">Very Active (Exercise 6-7 days/wk)</option>
+                            <option value="1.9">Extra Active (Physical job + training)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-xs text-gray-400">Primary Goal</label>
+                        <select id="profGoal" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
+                            <option value="cut">Lose Weight (Caloric Deficit)</option>
+                            <option value="maintain">Maintain Weight</option>
+                            <option value="bulk">Build Muscle (Caloric Surplus)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Live Preview Box -->
+                    <div class="bg-dark p-4 rounded-2xl border border-gray-700 mt-4 shadow-inner">
+                        <div class="text-xs text-secondary font-medium text-center mb-3 tracking-widest uppercase">Target Daily Macros</div>
+                        <div class="flex justify-around text-center">
+                            <div><div class="font-bold text-white text-lg" id="calcCals">-</div><div class="text-[10px] text-gray-500">Cals</div></div>
+                            <div><div class="font-bold text-blue-400 text-lg" id="calcPro">-</div><div class="text-[10px] text-gray-500">Pro</div></div>
+                            <div><div class="font-bold text-yellow-400 text-lg" id="calcCarb">-</div><div class="text-[10px] text-gray-500">Carb</div></div>
+                            <div><div class="font-bold text-red-400 text-lg" id="calcFat">-</div><div class="text-[10px] text-gray-500">Fat</div></div>
+                        </div>
+                    </div>
+
+                    <button onclick="window.saveSettings()" class="w-full bg-secondary text-dark font-bold py-4 rounded-xl mt-4 text-lg shadow-[0_0_15px_rgba(3,218,198,0.3)]">Calculate & Save Profile</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Modal (For Food Logging) -->
+        <div id="resultModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden items-center justify-center p-4">
+            <div class="bg-surface border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
+                <h3 class="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Detected Macros</h3>
+                <div class="space-y-3 mb-6" id="detectedMacrosList">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="window.closeResultModal(false)" class="flex-1 py-3 rounded-xl border border-gray-600 text-gray-300 font-medium">Cancel</button>
+                    <button onclick="window.closeResultModal(true)" class="flex-1 py-3 rounded-xl bg-primary text-dark font-bold shadow-lg">Confirm & Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic and Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment Variables
+        const apiKey = ""; 
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
+        // Firebase Init
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // App State
+        let userId = null;
+        let unsubscribeProfile = null;
+        let unsubscribeGoals = null;
+        let unsubscribeToday = null;
+
+        const state = {
+            profile: {
+                age: null, gender: 'male', height: null, weight: null, activityLevel: '1.2', goal: 'maintain', setupComplete: false
+            },
+            goals: {
+                calories: 2000, protein: 150, carbs: 150, fats: 60, addedSugar: 30
+            },
+            current: { steps: 0, weight: null },
+            logs: []
+        };
+
+        let currentPendingFood = null;
+        let currentBase64Image = null;
+
+        // Utils
+        const getTodayStr = () => {
+            const d = new Date();
+            return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        };
+        
+        function indicateSync() {
+            const icon = document.getElementById('syncIcon');
+            icon.classList.add('text-primary');
+            icon.classList.remove('text-secondary', 'opacity-50');
+            setTimeout(() => {
+                icon.classList.remove('text-primary');
+                icon.classList.add('text-secondary', 'opacity-50');
+            }, 1000);
+        }
+
+        // Setup UI
+        document.addEventListener('DOMContentLoaded', () => {
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
+            const tx = document.getElementById('foodInput');
+            tx.setAttribute('style', 'height:' + (tx.scrollHeight) + 'px;overflow-y:hidden;');
+        });
+
+        // Authentication & Listeners
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("Auth Error:", err);
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                setupListeners();
+            }
+        });
+
+        function setupListeners() {
+            i

@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Elite Nutrition Coach</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0f0f11',
+                        surface: '#1c1c1f',
+                        surfaceLight: '#2a2a2e',
+                        primary: '#bb86fc',
+                        secondary: '#03dac6',
+                        error: '#cf6679',
+                        warning: '#ffb74d',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f0f11; color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
+        }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        
+        .glass-panel {
+            background: rgba(28, 28, 31, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #bb86fc;
+            width: 20px; height: 20px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .coach-shimmer {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #1c1c1f 4%, #2a2a2e 25%, #1c1c1f 36%); background-size: 1000px 100%;
+        }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        
+        .chat-user { background: linear-gradient(135deg, #bb86fc, #9965f4); color: #121212; border-bottom-right-radius: 4px; }
+        .chat-expert { background-color: #1c1c1f; border: 1px solid #333; color: #ffffff; border-bottom-left-radius: 4px; }
+        
+        .typing-indicator { width: 8px; height: 8px; border-radius: 50%; background-color: transparent; box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; transform: translateX(-9999px); margin-left: 15px; margin-top: 5px; animation: dot-typing 1.5s infinite linear;}
+        @keyframes dot-typing {
+            0%, 66.667%, 100% { box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            16.667% { box-shadow: 9984px -10px 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            33.333% { box-shadow: 9984px 0 0 0 #03dac6, 9999px -10px 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            50% { box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px -10px 0 0 #03dac6; }
+        }
+        
+        .recipe-card { break-inside: avoid; margin-bottom: 1rem; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+        .recipe-card:active { transform: scale(0.98); }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .toast-enter { animation: toastSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast-exit { animation: toastSlideOut 0.3s ease-in forwards; }
+        @keyframes toastSlideIn { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes toastSlideOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
+
+        #quickPrompts { transition: all 0.2s ease-out; max-height: 50px; opacity: 1; }
+        #quickPrompts.hidden { max-height: 0; opacity: 0; margin-bottom: 0; padding-bottom: 0; border: none; overflow: hidden; display: block; pointer-events: none; }
+        
+        /* Modal body scroll lock */
+        body.modal-open { overflow: hidden; }
+    </style>
+</head>
+<body class="antialiased bg-dark text-white flex justify-center">
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4"></div>
+
+    <!-- App Container -->
+    <div class="w-full max-w-md min-h-screen flex flex-col relative shadow-2xl bg-dark">
+        
+        <!-- Header -->
+        <header class="p-5 flex justify-between items-center sticky top-0 z-40 glass-panel">
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2" id="headerTitle">
+                    Elite Coach
+                    <i id="syncIcon" class="fas fa-cloud-upload-alt text-[10px] text-secondary opacity-50 transition-colors duration-300"></i>
+                </h1>
+                <p class="text-xs text-gray-400 font-medium" id="currentDate">Today</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-center justify-center bg-surfaceLight px-3 py-1 rounded-xl border border-gray-700 shadow-inner">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Streak</span>
+                    <span class="text-sm font-bold text-orange-400 flex items-center gap-1"><i class="fas fa-fire"></i> <span id="streakCount">0</span></span>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-primary shadow-lg border border-gray-700 hover:bg-surfaceLight transition-colors relative" onclick="window.showSettings()">
+                    <i class="fas fa-user-cog"></i>
+                    <div id="apiKeyWarning" class="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full hidden border-2 border-dark"></div>
+                </button>
+            </div>
+        </header>
+
+        <!-- ============================================== -->
+        <!-- TAB 1: OVERVIEW DASHBOARD -->
+        <!-- ============================================== -->
+        <main id="tabDashboard" class="flex-1 p-4 space-y-6 pb-48 overflow-y-auto animate-fade-in">
+            <!-- Calorie Ring / Summary -->
+            <div class="bg-surface rounded-3xl p-6 shadow-2xl border border-gray-800 flex flex-col items-center relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-blue-500 to-secondary opacity-80"></div>
+                <div class="absolute -inset-24 bg-primary/5 blur-[100px] rounded-full z-0 pointer-events-none"></div>
+                
+                <h2 class="text-xs text-gray-400 font-bold tracking-widest uppercase mb-1 relative z-10">Calories Remaining</h2>
+                <div class="text-6xl font-black my-2 tracking-tighter relative z-10 drop-shadow-lg" id="calsRemaining">...</div>
+                
+                <div class="flex justify-between w-full mt-6 text-xs text-gray-400 px-4 relative z-10 bg-dark/50 py-3 rounded-2xl border border-gray-800/50">
+                    <div class="text-center w-1/3">
+                        <div class="text-white font-bold text-base" id="calsGoal">-</div>
+                        <div class="text-[10px] uppercase tracking-wider mt-1">Goal</div>
+                    </div>
+                    <div class="w-px bg-gray-700"></div>
+                    <div class="text-center w-1/3">
+                        <div class="text-error font-bold text-base" id="calsEaten">0</div>
+                        <div class="text-[10px] uppercase tracking-wider mt-1">Eaten</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Macros Grid -->
+            <div class="animate-slide-up" style="animation-delay: 0.1s;">
+                <h3 class="text-[11px] font-bold text-gray-500 mb-3 tracking-widest uppercase px-1 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-gray-600"></i> Macronutrients
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-blue-400 font-bold text-sm">Protein</span>
+                            <span class="text-white text-xs font-medium"><span id="proteinCurrent" class="text-sm">0</span> / <span id="proteinGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="proteinBar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(59,130,246,0.5)]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-yellow-400 font-bold text-sm">Carbs</span>
+                            <span class="text-white text-xs font-medium"><span id="carbsCurrent" class="text-sm">0</span> / <span id="carbsGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="carbsBar" class="bg-gradient-to-r from-yellow-600 to-yellow-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(234,179,8,0.5)]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-red-400 font-bold text-sm">Fats</span>
+                            <span class="text-white text-xs font-medium"><span id="fatsCurrent" class="text-sm">0</span> / <span id="fatsGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="fatsBar" class="bg-gradient-to-r from-red-600 to-red-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(239,68,68,0.5)]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-purple-400 font-bold text-sm">Sugars</span>
+                            <span class="text-[10px] text-gray-400">Add: <span id="sugarAddGoal">36</span>g</span>
+                        </div>
+                        <div class="flex justify-between items-end text-[10px] text-gray-500 mb-1.5 font-medium">
+                            <span>Nat: <span id="sugarNatCurrent" class="text-gray-300">0</span>g</span>
+                            <span>Add: <span id="sugarAddCurrent" class="text-white text-xs">0</span>g</span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="sugarAddBar" class="bg-gradient-to-r from-purple-600 to-purple-400 h-full rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Water Input -->
+            <div class="bg-surface rounded-3xl p-5 border border-gray-800 shadow-lg animate-slide-up relative overflow-hidden" style="animation-delay: 0.2s;">
+                <div class="absolute -right-10 -bottom-10 opacity-5 text-blue-500 pointer-events-none"><i class="fas fa-tint text-9xl"></i></div>
+                <div class="flex justify-between items-center mb-4 relative z-10">
+                    <label class="text-sm font-bold flex items-center"><i class="fas fa-tint text-blue-400 mr-2 drop-shadow-md"></i> Hydration</label>
+                    <span class="text-sm font-black text-blue-400 bg-blue-900/30 px-3 py-1 rounded-lg border border-blue-800/50"><span id="waterCurrent">0</span> / 3000ml</span>
+                </div>
+                <div class="flex items-center gap-4 relative z-10">
+                    <button onclick="window.addWater(-250)" class="w-12 h-12 rounded-full bg-dark flex items-center justify-center text-gray-400 border border-gray-700 hover:text-white transition-colors active:scale-95 shadow-sm"><i class="fas fa-minus text-xs"></i></button>
+                    <div class="flex-1 bg-dark rounded-full h-6 overflow-hidden relative border border-gray-800 shadow-inner p-1">
+                        <div id="waterBar" class="bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-400 h-full rounded-full progress-bar absolute left-1 top-1 shadow-[0_0_15px_rgba(59,130,246,0.6)]" style="width: 0%; height: calc(100% - 8px);"></div>
+                    </div>
+                    <button onclick="window.addWater(250)" class="w-12 h-12 rounded-full bg-dark flex items-center justify-center text-blue-400 border border-blue-900 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:bg-blue-900/20 transition-all active:scale-95"><i class="fas fa-plus text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- Micronutrients Grid -->
+            <div class="animate-slide-up" style="animation-delay: 0.3s;">
+                <h3 class="text-[11px] font-bold text-gray-500 mb-3 tracking-widest uppercase px-1 flex items-center gap-2">
+                    <i class="fas fa-microscope text-gray-600"></i> Micronutrients & Vitamins
+                </h3>
+                <div class="grid grid-cols-2 gap-2" id="microContainer">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: DIARY -->
+        <!-- ============================================== -->
+        <main id="tabDiary" class="flex-1 p-4 space-y-6 pb-48 overflow-y-auto hidden">
+            <!-- AI Insights -->
+            <div class="border border-gray-700 rounded-3xl bg-gradient-to-b from-surfaceLight to-surface overflow-hidden shadow-2xl relative">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary via-blue-400 to-primary"></div>
+                <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-surface/50">
+                    <h2 class="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-secondary to-blue-400 flex items-center">
+                        <i class="fas fa-robot mr-2 text-secondary drop-shadow-md"></i> AI Analysis
+                    </h2>
+                    <span id="coachStatusBadge" class="text-[9px] uppercase tracking-wider bg-dark text-gray-500 px-2 py-1 rounded-md font-bold border border-gray-700 shadow-inner">Waiting</span>
+                </div>
+
+                <div class="p-5" id="coachSectionContent">
+                    <div id="coachEmptyState" class="text-center py-8">
+                        <div class="w-16 h-16 rounded-full bg-dark flex items-center justify-center mx-auto mb-4 border border-gray-800 shadow-inner">
+                            <i class="fas fa-utensils text-2xl text-gray-600"></i>
+                        </div>
+                        <p class="text-sm text-gray-400 font-medium">Log your first meal to trigger the AI analysis.</p>
+                    </div>
+
+                    <div id="coachLoadingState" class="hidden space-y-4">
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <div class="loader w-4 h-4 border-[2px]"></div>
+                            <p class="text-xs text-secondary font-bold uppercase tracking-widest">Analyzing logs...</p>
+                        </div>
+                        <div class="h-16 rounded-2xl coach-shimmer border border-gray-800"></div>
+                        <div class="h-24 rounded-2xl coach-shimmer border border-gray-800"></div>
+                    </div>
+
+                    <div id="coachPopulatedState" class="hidden space-y-5">
+                        <div>
+                            <h3 class="text-[10px] font-bold text-gray-500 mb-2 tracking-widest uppercase flex items-center gap-1"><i class="fas fa-comment-dots text-gray-600"></i> Feedback</h3>
+                            <div class="bg-dark p-4 rounded-2xl border border-gray-700 shadow-inner text-sm text-gray-200 leading-relaxed font-medium" id="coachFeedback"></div>
+                        </div>
+                        <div>
+                            <h3 class="text-[10px] font-bold text-gray-500 mb-2 tracking-widest uppercase flex justify-between items-center">
+                                <span class="flex items-center gap-1"><i class="fas fa-exchange-alt text-gray-600"></i> Smart Swap</span>
+                                <span class="text-secondary bg-secondary/10 px-2 py-0.5 rounded text-[9px] truncate max-w-[120px]" id="coachTargetMeal"></span>
+                            </h3>
+                            <div class="bg-gradient-to-br from-dark to-surface p-4 rounded-2xl border border-secondary/30 shadow-[0_0_15px_rgba(3,218,198,0.1)] relative overflow-hidden group">
+                                <div class="absolute -right-4 -top-4 text-6xl text-secondary opacity-5"><i class="fas fa-leaf"></i></div>
+                                <div class="text-sm text-white mb-3 font-bold relative z-10 pr-6 leading-snug" id="coachCleanAlt"></div>
+                                <div class="inline-block bg-surface border border-secondary/50 px-3 py-1.5 rounded-lg text-xs font-black text-secondary relative z-10 shadow-md tracking-wide" id="coachAltMacros"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Food Log List -->
+            <div class="mt-8">
+                <h3 class="text-sm font-black mb-4 flex items-center justify-between uppercase tracking-wider text-gray-300">
+                    <span><i class="fas fa-list-ul mr-2 text-gray-500"></i> Today's Log</span>
+                    <button class="text-[10px] text-error font-bold py-1.5 px-3 rounded-lg border border-error/30 bg-error/10 hover:bg-error/20 transition-colors" onclick="window.confirmClearLogs()">CLEAR ALL</button>
+                </h3>
+                <div id="logContainer" class="space-y-3 pb-2">
+                    <div class="text-center text-gray-500 text-sm py-10 bg-surface rounded-2xl border border-gray-800 border-dashed" id="emptyLogMsg">
+                        <p class="italic">Nothing logged today yet.</p>
+                        <p class="text-xs text-gray-600 mt-1">Use the bar below to add text or a photo.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- TAB 3: RECIPES -->
+        <!-- ============================================== -->
+        <main id="tabRecipes" class="flex-1 pb-48 overflow-y-auto hidden relative">
+            
+            <!-- Sticky Header for Modes & Filters -->
+            <div class="sticky top-0 bg-dark/95 backdrop-blur-md z-20 pt-4 px-4 pb-2 border-b border-gray-800 shadow-md">
+                
+                <!-- Mode Toggle -->
+                <div class="flex gap-2 p-1 bg-surface rounded-xl w-full mb-3 border border-gray-700/50">
+                    <button id="modeDiscoverBtn" onclick="window.setRecipeMode('discover')" class="flex-1 py-2 rounded-lg bg-surfaceLight text-primary font-black text-[11px] uppercase tracking-wider shadow-sm transition-all"><i class="fas fa-compass mr-1"></i> Discover</button>
+                    <button id="modePantryBtn" onclick="window.setRecipeMode('pantry')" class="flex-1 py-2 rounded-lg text-gray-500 font-bold text-[11px] uppercase tracking-wider hover:text-gray-300 transition-all"><i class="fas fa-shopping-basket mr-1"></i> Pantry</button>
+                </div>
+
+                <!-- Pantry Input (Hidden initially) -->
+                <div id="pantryInputArea" class="hidden mb-3 animate-fade-in">
+                    <div class="flex gap-2 bg-surface border border-gray-700 rounded-xl p-1.5 focus-within:border-primary/50 transition-colors">
+                        <textarea id="pantryIngredients" rows="1" class="flex-1 bg-transparent border-none py-2 px-3 text-white outline-none resize-none overflow-hidden text-sm placeholder-gray-500" placeholder="E.g. Chicken, rice, broccoli..." oninput="window.autoResize(this)"></textarea>
+                        <button onclick="window.generateRecipes(true)" class="bg-gradient-to-r from-primary to-blue-500 text-white rounded-lg px-4 font-bold text-xs shrink-0 shadow-lg active:scale-95 transition-transform">Find</button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex gap-2 overflow-x-auto hide-scrollbar pb-1 pt-1" id="recipeFilters">
+                    <button onclick="window.setRecipeFilter('All')" id="filterAll" class="shrink-0 bg-primary/20 border border-primary text-primary text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors">All</button>
+                    <button onclick="window.setRecipeFilter('High Protein')" id="filterHigh Protein" class="shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors">High Protein</button>
+                    <button onclick="window.setRecipeFilter('Low Carb')" id="filterLow Carb" class="shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors">Low Carb</button>
+                    <button onclick="window.setRecipeFilter('Quick Prep (< 20m)')" id="filterQuick Prep (< 20m)" class="shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors">Quick Prep (<20m)</button>
+                    <button onclick="window.setRecipeFilter('Low Calorie')" id="filterLow Calorie" class="shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors">Low Calorie</button>
+                </div>
+            </div>
+            
+            <div class="px-4 mt-4">
+                <div id="recipesInitialState" class="text-center py-16 px-4 bg-surface rounded-3xl border border-gray-800 shadow-inner">
+                    <div class="w-20 h-20 bg-dark rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg border border-gray-700">
+                        <i class="fas fa-book-open text-3xl text-primary"></i>
+                    </div>
+                    <h3 class="text-lg font-bold mb-2">Chef Gemini</h3>
+                    <p class="text-gray-400 text-sm mb-8 leading-relaxed">Generate tailored recipes instantly based on your macros, diet, and available ingredients.</p>
+                    <button onclick="window.generateRecipes(true)" class="bg-gradient-to-r from-primary to-blue-500 text-white font-black py-4 px-8 rounded-2xl shadow-[0_0_20px_rgba(187,134,252,0.4)] hover:shadow-[0_0_25px_rgba(187,134,252,0.6)] hover:scale-105 transition-all active:scale-95 w-full">Generate Menu</button>
+                </div>
+                
+                <div id="recipeContainer" class="columns-1 gap-5 space-y-5">
+                    <!-- Recipes injected here -->
+                </div>
+
+                <!-- Infinite Scroll Loader & Trigger -->
+                <div id="recipeScrollTrigger" class="h-20 w-full flex items-center justify-center mt-4 hidden">
+                    <div class="loader border-primary w-6 h-6"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- TAB 4: EXPERT (CHAT) -->
+        <!-- ============================================== -->
+        <main id="tabExpert" class="flex-1 flex flex-col hidden h-[calc(100vh-140px)]">
+            <div class="flex-1 overflow-y-auto p-4 space-y-5 pb-48 hide-scrollbar scroll-smooth" id="chatContainer">
+                <div class="flex items-start gap-3 mt-2 animate-fade-in">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-blue-500 flex items-center justify-center shrink-0 shadow-lg border border-dark">
+                        <i class="fas fa-stethoscope text-dark"></i>
+                    </div>
+                    <div class="chat-expert p-4 rounded-2xl rounded-tl-sm text-sm shadow-xl max-w-[85%] leading-relaxed border-gray-700 font-medium">
+                        Hi! I'm your Elite Nutrition Expert. I have full access to your profile and today's food logs.<br><br>Ask me anything about diet, exercise, or how to optimize a specific meal today!
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- FLOATING INPUT AREA -->
+        <!-- ============================================== -->
+        <div id="inputLogging" class="fixed bottom-[72px] left-0 right-0 glass-panel border-t border-gray-700/50 p-3 pb-safe sm:max-w-md sm:mx-auto z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div class="flex gap-2 overflow-x-auto hide-scrollbar mb-2 px-1 hidden" id="quickPrompts"></div>
+            <div id="imagePreviewContainer" class="hidden mb-3 relative inline-block">
+                <img id="imagePreview" src="" class="h-20 w-20 object-cover rounded-xl border-2 border-primary shadow-lg">
+                <button onclick="window.clearImage()" class="absolute -top-2 -right-2 bg-error text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-xl hover:scale-110 transition-transform"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="flex items-end gap-2 bg-dark rounded-3xl p-1.5 border border-gray-700/80 shadow-inner focus-within:border-primary/50 transition-colors">
+                <div class="relative flex-1 flex items-end">
+                    <button onclick="document.getElementById('cameraInput').click()" class="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-primary transition-colors shrink-0 m-0.5 bg-surface rounded-full">
+                        <i class="fas fa-camera text-sm"></i>
+                    </button>
+                    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="window.handleImageSelection(event)">
+                    <textarea id="foodInput" rows="1" class="w-full bg-transparent border-none py-3 pl-2 pr-2 text-white outline-none resize-none overflow-hidden text-sm font-medium placeholder-gray-500 max-h-[100px]" placeholder="Describe meal or snap a photo..." oninput="window.handleInput(this)"></textarea>
+                </div>
+                <button id="submitBtn" onclick="window.logFood()" class="bg-gradient-to-r from-primary to-blue-500 text-white rounded-full h-11 w-11 shrink-0 font-bold flex items-center justify-center hover:scale-105 transition-all shadow-[0_0_15px_rgba(187,134,252,0.4)] disabled:opacity-50 disabled:scale-100">
+                    <i class="fas fa-arrow-up text-lg" id="submitIcon"></i>
+                    <div class="loader hidden w-5 h-5 border-[2px]" id="submitLoader"></div>
+                </button>
+            </div>
+            <div id="apiStatusText" class="text-[9px] text-primary mt-2 text-center font-bold tracking-widest uppercase hidden animate-pulse">Analyzing Macros...</div>
+            <div id="apiErrorMsg" class="text-error text-xs mt-2 hidden text-center font-bold"></div>
+        </div>
+
+        <div id="inputExpert" class="fixed bottom-[72px] left-0 right-0 glass-panel border-t border-gray-700/50 p-3 pb-safe sm:max-w-md sm:mx-auto z-30 hidden shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div class="flex items-end gap-2 bg-dark rounded-3xl p-1.5 border border-gray-700/80 shadow-inner focus-within:border-secondary/50 transition-colors">
+                <textarea id="chatInput" rows="1" class="flex-1 bg-transparent border-none py-3 px-4 text-white outline-none resize-none overflow-hidden text-sm font-medium placeholder-gray-500 max-h-[100px]" placeholder="Ask your expert..." oninput="window.autoResize(this)" onkeypress="window.handleChatKeyPress(event)"></textarea>
+                <button id="sendChatBtn" onclick="window.sendChatMessage()" class="bg-gradient-to-r from-secondary to-cyan-500 text-dark rounded-full h-11 w-11 shrink-0 font-black flex items-center justify-center hover:scale-105 transition-all shadow-[0_0_15px_rgba(3,218,198,0.4)] disabled:opacity-50 disabled:scale-100">
+                    <i class="fas fa-paper-plane text-sm" id="chatSubmitIcon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- BOTTOM NAVIGATION BAR -->
+        <!-- ============================================== -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-surface border-t border-gray-800 flex justify-around items-center h-[72px] pb-safe sm:max-w-md sm:mx-auto z-40 px-2 shadow-[0_-5px_20px_rgba(0,0,0,0.5)]">
+            <button onclick="window.switchTab('dashboard')" id="navDashboard" class="flex flex-col items-center justify-center gap-1.5 text-primary w-16 h-full transition-all relative">
+                <div class="absolute top-0 w-8 h-1 bg-primary rounded-b-full transition-opacity opacity-100" id="indDashboard"></div>
+                <i class="fas fa-chart-pie text-xl mb-0.5"></i><span class="text-[9px] font-black tracking-widest uppercase">Overview</span>
+            </button>
+            <button onclick="window.switchTab('diary')" id="navDiary" class="flex flex-col items-center justify-center gap-1.5 text-gray-500 hover:text-gray-300 w-16 h-full transition-all relative">
+                <div class="absolute top-0 w-8 h-1 bg-primary rounded-b-full transition-opacity opacity-0" id="indDiary"></div>
+                <i class="fas fa-book text-xl mb-0.5"></i><span class="text-[9px] font-black tracking-widest uppercase">Diary</span>
+            </button>
+            <button onclick="window.switchTab('recipes')" id="navRecipes" class="flex flex-col items-center justify-center gap-1.5 text-gray-500 hover:text-gray-300 w-16 h-full transition-all relative">
+                <div class="absolute top-0 w-8 h-1 bg-primary rounded-b-full transition-opacity opacity-0" id="indRecipes"></div>
+                <i class="fas fa-utensils text-xl mb-0.5"></i><span class="text-[9px] font-black tracking-widest uppercase">Recipes</span>
+            </button>
+            <button onclick="window.switchTab('expert')" id="navExpert" class="flex flex-col items-center justify-center gap-1.5 text-gray-500 hover:text-gray-300 w-16 h-full transition-all relative">
+                <div class="absolute top-0 w-8 h-1 bg-secondary rounded-b-full transition-opacity opacity-0" id="indExpert"></div>
+                <i class="fas fa-comment-medical text-xl mb-0.5"></i><span class="text-[9px] font-black tracking-widest uppercase">Expert</span>
+            </button>
+        </nav>
+
+        <!-- ============================================== -->
+        <!-- MODALS -->
+        <!-- ============================================== -->
+        
+        <!-- Generic Confirmation Modal -->
+        <div id="confirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden items-center justify-center p-4 opacity-0 transition-opacity duration-200">
+            <div class="bg-surface border border-gray-700 rounded-3xl p-6 w-full max-w-xs shadow-2xl transform scale-95 transition-transform duration-200" id="confirmModalInner">
+                <div class="w-12 h-12 bg-error/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-error/30"><i class="fas fa-exclamation-triangle text-error text-xl"></i></div>
+                <h3 class="text-lg font-black text-center mb-2" id="confirmTitle">Are you sure?</h3>
+                <p class="text-sm text-gray-400 text-center mb-6" id="confirmMsg">This action cannot be undone.</p>
+                <div class="flex gap-3">
+                    <button onclick="window.closeConfirmModal(false)" class="flex-1 py-3 rounded-xl border border-gray-600 text-gray-300 font-bold hover:bg-gray-800 transition-colors">Cancel</button>
+                    <button onclick="window.closeConfirmModal(true)" id="confirmActionBtn" class="flex-1 py-3 rounded-xl bg-error text-white font-bold shadow-[0_0_15px_rgba(207,102,121,0.4)] hover:bg-red-500 transition-colors">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Detail Full Modal -->
+        <div id="recipeDetailModal" class="fixed inset-0 bg-dark z-[70] hidden flex-col transform transition-transform duration-300 translate-y-full">
+            <div class="relative h-48 bg-gradient-to-br from-primary/20 to-blue-500/20 flex items-center justify-center border-b border-gray-800 shrink-0">
+                <button onclick="window.closeRecipeModal()" class="absolute top-6 left-4 w-10 h-10 bg-dark/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-gray-600 shadow-lg z-10"><i class="fas fa-chevron-left"></i></button>
+                <i class="fas fa-utensils text-6xl text-white/30 drop-shadow-md"></i>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-5 pb-32">
+                <div class="flex flex-wrap gap-2 mb-3" id="rdTags"></div>
+                <h2 class="text-3xl font-black mb-2 leading-tight" id="rdTitle">Recipe Title</h2>
+                <p class="text-sm text-gray-400 mb-6 font-medium leading-relaxed" id="rdDesc">Description here</p>
+
+                <div class="grid grid-cols-4 gap-2 mb-8">
+                    <div class="bg-orange-500/10 text-orange-400 rounded-xl p-3 text-center border border-orange-500/20"><div class="text-[10px] uppercase tracking-widest font-bold mb-1">Cals</div><div class="text-sm font-black" id="rdCals">0</div></div>
+                    <div class="bg-blue-500/10 text-blue-400 rounded-xl p-3 text-center border border-blue-500/20"><div class="text-[10px] uppercase tracking-widest font-bold mb-1">Pro</div><div class="text-sm font-black" id="rdPro">0g</div></div>
+                    <div class="bg-yellow-500/10 text-yellow-400 rounded-xl p-3 text-center border border-yellow-500/20"><div class="text-[10px] uppercase tracking-widest font-bold mb-1">Carb</div><div class="text-sm font-black" id="rdCarb">0g</div></div>
+                    <div class="bg-red-500/10 text-red-400 rounded-xl p-3 text-center border border-red-500/20"><div class="text-[10px] uppercase tracking-widest font-bold mb-1">Fat</div><div class="text-sm font-black" id="rdFat">0g</div></div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-800 pb-2"><i class="fas fa-shopping-basket text-primary"></i> Ingredients</h3>
+                    <ul class="text-sm text-gray-300 space-y-3" id="rdIngredients"></ul>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-gray-800 pb-2"><i class="fas fa-list-ol text-secondary"></i> Instructions</h3>
+                    <ol class="text-sm text-gray-300 space-y-4" id="rdInstructions"></ol>
+                </div>
+            </div>
+
+            <!-- Fixed Bottom Action Bar -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 bg-dark/95 backdrop-blur-md border-t border-gray-800 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+                <button id="rdLogBtn" class="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-black py-4 rounded-xl text-base shadow-[0_0_20px_rgba(187,134,252,0.4)] active:scale-[0.98] transition-all flex justify-center items-center gap-2">
+                    <i class="fas fa-plus-circle text-lg"></i> Log this Meal
+                </button>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex-col justify-end">
+            <div class="bg-surface rounded-t-3xl p-6 transform transition-transform duration-300 translate-y-full border-t border-gray-700 max-h-[90vh] overflow-y-auto" id="settingsModalInner">
+                <div class="flex justify-between items-center mb-4 sticky top-0 bg-surface z-10 py-2 border-b border-gray-800 pb-4">
+                    <h2 class="text-xl font-black"><i class="fas fa-sliders-h text-primary mr-2"></i> Your Profile</h2>
+                    <button onclick="window.hideSettings()" id="closeSettingsBtn" class="w-8 h-8 bg-dark rounded-full flex items-center justify-center text-gray-400 hover:text-white border border-gray-700"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- API KEY SECTION (NEW) -->
+                    <div class="bg-gradient-to-br from-dark to-surface p-4 rounded-2xl border border-primary/30 relative overflow-hidden shadow-inner mb-2">
+                        <div class="absolute -right-2 -bottom-2 opacity-5 text-primary"><i class="fas fa-key text-5xl"></i></div>
+                        <label class="text-xs text-primary font-black uppercase tracking-wider pl-1 flex items-center gap-1.5 relative z-10"><i class="fas fa-lock"></i> Gemini API Key</label>
+                        <input type="password" id="profApiKey" class="w-full bg-surface border border-gray-700 rounded-xl p-3 mt-2 text-white outline-none focus:border-primary font-mono text-sm relative z-10" placeholder="AIzaSy...">
+                        <p class="text-[10px] text-gray-400 mt-2 relative z-10">Required for AI features. Stored securely on your profile.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Country</label>
+                            <select id="profCountry" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium text-sm">
+                                <option value="Australia">Australia</option>
+                                <option value="United States">United States</option>
+                                <option value="United Kingdom">United Kingdom</option>
+                                <option value="Canada">Canada</option>
+                                <option value="Global">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Dietary Pref</label>
+                            <select id="profDiet" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium text-sm">
+                                <option value="None">None</option>
+                                <option value="Vegetarian">Vegetarian</option>
+                                <option value="Vegan">Vegan</option>
+                                <option value="Keto">Keto</option>
+                                <option value="Gluten-Free">Gluten-Free</option>
+                                <option value="Paleo">Paleo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Age</label>
+                            <input type="number" id="profAge" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium" oninput="window.liveCalculate()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Gender</label>
+                            <select id="profGender" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium" onchange="window.liveCalculate()">
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Height (cm)</label>
+                            <input type="number" id="profHeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium" oninput="window.liveCalculate()">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Weight (kg)</label>
+                            <input type="number" step="0.1" id="profWeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium" oninput="window.liveCalculate()">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Activity Level</label>
+                        <select id="profActivity" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium text-sm" onchange="window.liveCalculate()">
+                            <option value="1.2">Sedentary (Desk job)</option>
+                            <option value="1.375">Light Active (1-3x/wk)</option>
+                            <option value="1.55">Mod Active (3-5x/wk)</option>
+                            <option value="1.725">Very Active (6-7x/wk)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-400 font-bold uppercase tracking-wider pl-1">Primary Goal</label>
+                        <select id="profGoal" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-primary font-medium text-sm" onchange="window.liveCalculate()">
+                            <option value="cut">Lose Weight</option>
+                            <option value="maintain">Maintain Weight</option>
+                            <option value="bulk">Build Muscle</option>
+                        </select>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-dark to-surface p-4 rounded-2xl border border-gray-700 mt-4 shadow-inner relative overflow-hidden">
+                        <div class="text-[10px] text-gray-400 font-black text-center mb-3 tracking-widest uppercase">Target Daily Macros</div>
+                        <div class="flex justify-around text-center">
+                            <div><div class="font-black text-white text-xl" id="calcCals">-</div><div class="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Cals</div></div>
+                            <div><div class="font-black text-blue-400 text-xl" id="calcPro">-</div><div class="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Pro</div></div>
+                            <div><div class="font-black text-yellow-400 text-xl" id="calcCarb">-</div><div class="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Carb</div></div>
+                            <div><div class="font-black text-red-400 text-xl" id="calcFat">-</div><div class="text-[9px] text-gray-500 uppercase tracking-wider mt-0.5">Fat</div></div>
+                        </div>
+                    </div>
+                    <button onclick="window.saveSettings()" class="w-full bg-gradient-to-r from-primary to-blue-500 text-white font-black py-4 rounded-xl mt-4 text-base shadow-[0_0_20px_rgba(187,134,252,0.3)] hover:scale-[1.02] active:scale-95 transition-transform">Calculate & Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Modal (For Food Logging) -->
+        <div id="resultModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+            <div class="bg-surface border border-gray-700 rounded-3xl p-6 w-full max-w-sm max-h-[85vh] overflow-y-auto relative shadow-2xl animate-slide-up">
+                <div class="flex justify-between items-start mb-5 border-b border-gray-800 pb-4">
+                    <div><h3 class="text-xl font-black flex items-center gap-2"><i class="fas fa-check-circle text-primary"></i> Data Verified</h3></div>
+                    <div class="text-right bg-dark px-3 py-1.5 rounded-lg border border-gray-800"><div class="text-[8px] text-gray-500 uppercase tracking-widest font-bold">Accuracy</div><div id="accuracyBadge" class="text-sm font-black text-secondary">...</div></div>
+                </div>
+                <div class="flex items-start gap-3 mb-5 bg-dark/50 p-3 rounded-xl border border-gray-800/50"><i class="fas fa-robot text-primary mt-1"></i><div id="accuracyCritique" class="text-xs text-gray-300 italic font-medium leading-relaxed"></div></div>
+                <div class="space-y-3 mb-6" id="detectedMacrosList"></div>
+                <div class="flex gap-3 sticky bottom-0 bg-surface pt-4 border-t border-gray-800 mt-2">
+                    <button onclick="window.closeResultModal(false)" class="flex-1 py-3.5 rounded-xl border border-gray-600 text-gray-300 font-bold hover:bg-gray-800 transition-colors">Discard</button>
+                    <button onclick="window.closeResultModal(true)" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-primary to-blue-500 text-white font-black shadow-[0_0_15px_rgba(187,134,252,0.4)] active:scale-95 transition-transform">Confirm & Log</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application Logic and Firebase Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let userId = null;
+        let unsubscribeProfile = null;
+        let unsubscribeGoals = null;
+        let unsubscribeToday = null;
+
+        const microConfig = [
+            { key: 'sodium', label: 'Sodium', unit: 'mg', dv: 2300, isLimit: true }, 
+            { key: 'potassium', label: 'Potassium', unit: 'mg', dv: 4700 },
+            { key: 'calcium', label: 'Calcium', unit: 'mg', dv: 1300 },
+            { key: 'magnesium', label: 'Magnesium', unit: 'mg', dv: 420 },
+            { key: 'iron', label: 'Iron', unit: 'mg', dv: 18 },
+            { key: 'zinc', label: 'Zinc', unit: 'mg', dv: 11 },
+            { key: 'vitC', label: 'Vit C', unit: 'mg', dv: 90 },
+            { key: 'vitD', label: 'Vit D', unit: 'mcg', dv: 20 },
+            { key: 'vitB12', label: 'Vit B12', unit: 'mcg', dv: 2.4 },
+            { key: 'vitA', label: 'Vit A', unit: 'mcg', dv: 900 }
+        ];
+
+        const commonFoods = [
+            { text: '1 Cup Black Coffee', icon: '☕' }, { text: '1 Medium Banana', icon: '🍌' }, { text: '1 Scoop Whey Protein with Water', icon: '🥤' },
+            { text: 'Mixed Salad with Vinaigrette', icon: '🥗' }, { text: '2 Scrambled Eggs', icon: '🍳' }, { text: 'Chicken Breast (200g)', icon: '🍗' },
+            { text: 'Oatmeal with Berries', icon: '🥣' }, { text: 'Avocado Toast', icon: '🥑' }, { text: '1 Medium Apple', icon: '🍎' },
+            { text: 'Greek Yogurt (150g)', icon: '🥛' }, { text: 'Protein Bar', icon: '🍫' }, { text: 'Slice of Whole Wheat Bread', icon: '🍞' }
+        ];
+
+        const state = {
+            profile: { apiKey: '', country: 'Australia', diet: 'None', age: null, gender: 'male', height: null, weight: null, activityLevel: '1.2', goal: 'maintain', setupComplete: false, lastLogin: null, streak: 0 },
+            goals: { calories: 2000, protein: 150, carbs: 150, fats: 60, addedSugar: 36, water: 3000 },
+            current: { waterIntake: 0 },
+            logs: [],
+            coachData: null,
+            isCoachLoading: false,
+            chatHistory: [],
+            
+            // Recipes State
+            recipes: [],
+            recipeMode: 'discover', // 'discover' or 'pantry'
+            recipeFilter: 'All',
+            isFetchingRecipes: false
+        };
+
+        let currentPendingFood = null;
+        let currentBase64Image = null;
+        let coachUpdateTimer = null;
+
+        const getTodayStr = () => {
+            const d = new Date();
+            return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        };
+
+        const getApiKey = () => state.profile.apiKey;
+        
+        function checkApiKey() {
+            if (!getApiKey()) {
+                window.showToast("API Key Missing! Set it in Settings to use AI features.", "error");
+                document.getElementById('apiKeyWarning').classList.remove('hidden');
+                return false;
+            }
+            document.getElementById('apiKeyWarning').classList.add('hidden');
+            return true;
+        }
+        
+        function indicateSync() {
+            const icon = document.getElementById('syncIcon'); if(!icon) return;
+            icon.classList.add('text-primary'); icon.classList.remove('text-secondary', 'opacity-50');
+            setTimeout(() => { icon.classList.remove('text-primary'); icon.classList.add('text-secondary', 'opacity-50'); }, 800);
+        }
+
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? '<i class="fas fa-check-circle text-secondary"></i>' : (type === 'error' ? '<i class="fas fa-exclamation-circle text-error"></i>' : '<i class="fas fa-info-circle text-primary"></i>');
+            const border = type === 'success' ? 'border-secondary/30' : (type === 'error' ? 'border-error/30' : 'border-primary/30');
+            
+            toast.className = `bg-surface/95 backdrop-blur-md text-white px-4 py-3 rounded-xl border ${border} shadow-2xl flex items-center gap-3 text-sm font-bold toast-enter`;
+            toast.innerHTML = `${icon} ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('toast-enter'); toast.classList.add('toast-exit'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        let confirmCallback = null;
+        window.showConfirmModal = function(title, message, callback) {
+            document.getElementById('confirmTitle').innerText = title; document.getElementById('confirmMsg').innerText = message; confirmCallback = callback;
+            const modal = document.getElementById('confirmModal'); const inner = document.getElementById('confirmModalInner');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('opacity-0'); inner.classList.remove('scale-95'); }, 10);
+        }
+        window.closeConfirmModal = function(result) {
+            const modal = document.getElementById('confirmModal'); const inner = document.getElementById('confirmModalInner');
+            modal.classList.add('opacity-0'); inner.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); if(result && confirmCallback) confirmCallback(); confirmCallback = null; }, 200);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
+            initMicroUI();
+            renderCoachSection(); 
+            
+            // Setup Infinite Scroll for Recipes
+            const recipeObserver = new IntersectionObserver((entries) => {
+                if(entries[0].isIntersecting && !state.isFetchingRecipes && state.recipes.length > 0) {
+                    window.generateRecipes(false); // fetch more
+                }
+            }, { rootMargin: '100px' });
+            recipeObserver.observe(document.getElementById('recipeScrollTrigger'));
+        });
+
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+            else await signInAnonymously(auth);
+        };
+
+        initAuth().then(() => {
+            onAuthStateChanged(auth, (user) => { 
+                if (user) { userId = user.uid; setupListeners(); } 
+            });
+        });
+
+        function calculateStreak() {
+            const today = getTodayStr(); let lastLogin = state.profile.lastLogin; let currentStreak = state.profile.streak || 0;
+            if (lastLogin !== today) {
+                const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = new Date(yesterday.getTime() - (yesterday.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                if (lastLogin === yesterdayStr) currentStreak += 1; else currentStreak = 1;
+                state.profile.lastLogin = today; state.profile.streak = currentStreak;
+                if(userId) setDoc(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'profile'), state.profile, { merge: true });
+            }
+            document.getElementById('streakCount').innerText = state.profile.streak || 0;
+        }
+
+        function setupListeners() {
+            if (!userId) return;
+            if (unsubscribeProfile) unsubscribeProfile(); if (unsubscribeGoals) unsubscribeGoals(); if (unsubscribeToday) unsubscribeToday();
+
+            unsubscribeProfile = onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'profile'), (docSnap) => {
+                if (docSnap.exists()) {
+                    state.profile = { ...state.profile, ...docSnap.data() };
+                    if(!state.profile.country) state.profile.country = 'Australia'; 
+                    if(!state.profile.diet) state.profile.diet = 'None'; 
+                    if(!state.profile.apiKey) document.getElementById('apiKeyWarning').classList.remove('hidden');
+                    else document.getElementById('apiKeyWarning').classList.add('hidden');
+                    
+                    document.getElementById('streakCount').innerText = state.profile.streak || 0;
+                    if (!state.profile.setupComplete) window.showSettings();
+                    else calculateStreak();
+                } else { 
+                    window.showSettings(); document.getElementById('closeSettingsBtn').classList.add('hidden'); 
+                }
+            }, (err) => console.error(err));
+
+            unsubscribeGoals = onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'goals'), (docSnap) => {
+                if (docSnap.exists()) { state.goals = { ...state.goals, ...docSnap.data() }; updateDashboard(); }
+            }, (err) => console.error(err));
+
+            unsubscribeToday = onSnapshot(doc(db, 'artifacts', appId, 'users', userId, 'days', getTodayStr()), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    state.current.waterIntake = data.waterIntake || 0; state.logs = data.logs || []; state.coachData = data.coachData || null;
+                } else {
+                    state.current.waterIntake = 0; state.logs = []; state.coachData = null;
+                }
+                updateDashboard(); if(!state.isCoachLoading) renderCoachSection(); indicateSync();
+            }, (err) => console.error(err));
+        }
+
+        async function saveGoalsAndProfileToCloud() {
+            if (!userId) return;
+            state.profile.setupComplete = true;
+            await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'profile'), state.profile);
+            await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'settings', 'goals'), state.goals);
+        }
+
+        async function saveTodayToCloud() {
+            if (!userId) return;
+            const payload = { waterIntake: parseInt(state.current.waterIntake) || 0, logs: state.logs, lastUpdated: new Date().getTime() };
+            if (state.coachData) payload.coachData = state.coachData; else if (state.logs.length === 0) payload.coachData = null; 
+            await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'days', getTodayStr()), payload, { merge: true });
+        }
+
+        window.switchTab = function(tabName) {
+            const tabs = ['tabDashboard', 'tabDiary', 'tabRecipes', 'tabExpert'];
+            const navMap = {
+                'dashboard': { btn: 'navDashboard', ind: 'indDashboard', color: 'text-primary', title: 'Overview', icon: '' },
+                'diary': { btn: 'navDiary', ind: 'indDiary', color: 'text-primary', title: 'Food Diary', icon: '' },
+                'recipes': { btn: 'navRecipes', ind: 'indRecipes', color: 'text-primary', title: 'Recipes', icon: '<i class="fas fa-fire-burner text-primary mr-2"></i>' },
+                'expert': { btn: 'navExpert', ind: 'indExpert', color: 'text-secondary', title: 'The Expert', icon: '<i class="fas fa-stethoscope text-secondary mr-2"></i>' }
+            };
+            
+            const dbInp = document.getElementById('inputLogging'); const exInp = document.getElementById('inputExpert'); const title = document.getElementById('headerTitle');
+
+            tabs.forEach(t => document.getElementById(t).classList.add('hidden'));
+            Object.values(navMap).forEach(m => {
+                document.getElementById(m.btn).classList.remove('text-primary', 'text-secondary'); document.getElementById(m.btn).classList.add('text-gray-500');
+                document.getElementById(m.ind).classList.remove('opacity-100'); document.getElementById(m.ind).classList.add('opacity-0');
+            });
+
+            document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden');
+            const targetNav = navMap[tabName];
+            document.getElementById(targetNav.btn).classList.add(targetNav.color); document.getElementById(targetNav.btn).classList.remove('text-gray-500');
+            document.getElementById(targetNav.ind).classList.add('opacity-100'); document.getElementById(targetNav.ind).classList.remove('opacity-0');
+            
+            title.innerHTML = `${targetNav.icon}${targetNav.title} <i id="syncIcon" class="fas fa-cloud-upload-alt text-[10px] text-secondary opacity-50 ml-1"></i>`;
+
+            if (tabName === 'dashboard' || tabName === 'diary') { dbInp.classList.remove('hidden'); exInp.classList.add('hidden'); } 
+            else if (tabName === 'expert') { dbInp.classList.add('hidden'); exInp.classList.remove('hidden'); const chatContainer = document.getElementById('chatContainer'); chatContainer.scrollTop = chatContainer.scrollHeight; } 
+            else { dbInp.classList.add('hidden'); exInp.classList.add('hidden'); }
+        };
+
+        function initMicroUI() {
+            const container = document.getElementById('microContainer'); container.innerHTML = '';
+            microConfig.forEach(micro => {
+                const div = document.createElement('div');
+                div.className = 'bg-surface rounded-xl p-3 border border-gray-800 shadow-sm flex flex-col justify-between';
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-1.5"><span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate pr-1" id="micro_label_${micro.key}">${micro.label}</span><span class="text-[9px] text-gray-500 font-bold shrink-0"><span id="micro_val_${micro.key}" class="text-white">0</span>/${micro.dv}${micro.unit}</span></div>
+                    <div class="w-full bg-dark rounded-full h-1.5 mt-1 overflow-hidden shadow-inner"><div id="micro_bar_${micro.key}" class="bg-gray-500 h-full rounded-full progress-bar" style="width: 0%"></div></div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateDashboard() {
+            let eatenCals = 0, eatenPro = 0, eatenCarbs = 0, eatenFats = 0, eatenNatSugar = 0, eatenAddSugar = 0; let eatenMicros = {}; microConfig.forEach(m => eatenMicros[m.key] = 0);
+            state.logs.forEach(log => {
+                eatenCals += log.calories || 0; eatenPro += log.protein || 0; eatenCarbs += log.carbs || 0; eatenFats += log.fats || 0;
+                eatenNatSugar += log.naturalSugar || 0; eatenAddSugar += log.addedSugar || 0;
+                if(log.micros) microConfig.forEach(m => { eatenMicros[m.key] += log.micros[m.key] || 0; });
+            });
+
+            const remaining = state.goals.calories - eatenCals;
+            document.getElementById('calsRemaining').innerText = remaining; document.getElementById('calsRemaining').className = `text-6xl font-black my-2 tracking-tighter relative z-10 drop-shadow-lg ${remaining < 0 ? 'text-error' : 'text-white'}`;
+            document.getElementById('calsGoal').innerText = state.goals.calories; document.getElementById('calsEaten').innerText = eatenCals;
+
+            document.getElementById('proteinCurrent').innerText = `${eatenPro}`; document.getElementById('proteinGoal').innerText = `${state.goals.protein}g`;
+            document.getElementById('carbsCurrent').innerText = `${eatenCarbs}`; document.getElementById('carbsGoal').innerText = `${state.goals.carbs}g`;
+            document.getElementById('fatsCurrent').innerText = `${eatenFats}`; document.getElementById('fatsGoal').innerText = `${state.goals.fats}g`;
+            document.getElementById('sugarNatCurrent').innerText = Math.round(eatenNatSugar); document.getElementById('sugarAddCurrent').innerText = Math.round(eatenAddSugar);
+            document.getElementById('waterCurrent').innerText = state.current.waterIntake;
+            
+            const waterPct = Math.min((state.current.waterIntake / state.goals.water) * 100, 100); document.getElementById('waterBar').style.width = `${waterPct}%`;
+
+            const updateBar = (id, current, goal, colorGradientClass) => {
+                const el = document.getElementById(id); if (goal === 0 || goal === null) goal = 1; 
+                const pct = Math.min((current / goal) * 100, 100); el.style.width = `${pct}%`;
+                if (current > goal) el.className = 'bg-gradient-to-r from-error to-red-500 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(207,102,121,0.5)]'; 
+                else el.className = `${colorGradientClass} h-full rounded-full progress-bar`;
+            };
+
+            updateBar('proteinBar', eatenPro, state.goals.protein, 'bg-gradient-to-r from-blue-600 to-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.5)]'); 
+            updateBar('carbsBar', eatenCarbs, state.goals.carbs, 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(234,179,8,0.5)]');
+            updateBar('fatsBar', eatenFats, state.goals.fats, 'bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_10px_rgba(239,68,68,0.5)]'); 
+            updateBar('sugarAddBar', eatenAddSugar, state.goals.addedSugar, 'bg-gradient-to-r from-purple-600 to-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.5)]');
+
+            microConfig.forEach(m => {
+                const valEl = document.getElementById(`micro_val_${m.key}`); const barEl = document.getElementById(`micro_bar_${m.key}`); const labelEl = document.getElementById(`micro_label_${m.key}`);
+                if(valEl && barEl) {
+                    let current = eatenMicros[m.key]; valEl.innerText = current > 10 ? Math.round(current) : Math.round(current * 10) / 10;
+                    const pct = Math.min((current / m.dv) * 100, 100); barEl.style.width = `${pct}%`;
+                    if(m.isLimit && current > m.dv) { barEl.className = 'bg-error h-full rounded-full progress-bar'; valEl.classList.add('text-error'); valEl.classList.remove('text-white'); labelEl.classList.add('text-error'); labelEl.classList.remove('text-gray-400'); } 
+                    else if (!m.isLimit && pct >= 100) { barEl.className = 'bg-secondary h-full rounded-full progress-bar'; valEl.classList.remove('text-error', 'text-white'); valEl.classList.add('text-secondary'); labelEl.classList.remove('text-error'); labelEl.classList.add('text-gray-400'); } 
+                    else if (pct > 0) { barEl.className = 'bg-blue-400 h-full rounded-full progress-bar'; valEl.classList.remove('text-error', 'text-secondary'); valEl.classList.add('text-white'); labelEl.classList.remove('text-error'); labelEl.classList.add('text-gray-400'); } 
+                    else { barEl.className = 'bg-gray-600 h-full rounded-full progress-bar'; valEl.classList.remove('text-error', 'text-secondary'); valEl.classList.add('text-white'); labelEl.classList.remove('text-error'); labelEl.classList.add('text-gray-400'); }
+                }
+            });
+            renderLogs();
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('logContainer'); const emptyMsg = document.getElementById('emptyLogMsg');
+            Array.from(container.children).forEach(child => { if(child.id !== 'emptyLogMsg') container.removeChild(child); });
+            if (state.logs.length === 0) { emptyMsg.style.display = 'block'; return; }
+            emptyMsg.style.display = 'none';
+
+            [...state.logs].reverse().forEach((log, index) => {
+                const div = document.createElement('div'); div.className = 'bg-surface p-4 rounded-2xl border border-gray-800 shadow-lg flex justify-between items-center animate-slide-up group'; div.style.animationDelay = `${index * 0.05}s`;
+                const time = new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                div.innerHTML = `
+                    <div class="flex-1 pr-2">
+                        <div class="font-black text-white text-base flex items-center gap-2 mb-1">${log.name} <span class="text-[9px] text-gray-500 font-bold tracking-widest uppercase bg-dark px-2 py-0.5 rounded-md border border-gray-700">${time}</span></div>
+                        <div class="flex flex-wrap gap-2 text-xs font-bold">
+                            <span class="bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded flex items-center"><i class="fas fa-fire mr-1 text-[10px]"></i>${log.calories}</span>
+                            <span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded">P:${log.protein}g</span>
+                            <span class="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded">C:${log.carbs}g</span>
+                            <span class="bg-red-500/10 text-red-400 px-2 py-0.5 rounded">F:${log.fats}g</span>
+                        </div>
+                    </div>
+                    <button onclick="window.deleteLog('${log.id}')" class="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-white hover:bg-error transition-all rounded-xl bg-dark border border-gray-800 shadow-sm active:scale-95 shrink-0"><i class="fas fa-trash-alt text-sm"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function renderCoachSection() {
+            const emptyState = document.getElementById('coachEmptyState'); const loadingState = document.getElementById('coachLoadingState'); const populatedState = document.getElementById('coachPopulatedState'); const statusBadge = document.getElementById('coachStatusBadge');
+            emptyState.classList.add('hidden'); loadingState.classList.add('hidden'); populatedState.classList.add('hidden');
+
+            if (state.logs.length === 0) { emptyState.classList.remove('hidden'); statusBadge.innerText = 'Waiting'; statusBadge.className = "text-[9px] uppercase tracking-wider bg-dark text-gray-500 px-2 py-1 rounded-md font-bold border border-gray-700 shadow-inner"; } 
+            else if (state.isCoachLoading) { loadingState.classList.remove('hidden'); statusBadge.innerText = 'Analyzing'; statusBadge.className = "text-[9px] uppercase tracking-wider bg-secondary text-dark px-2 py-1 rounded-md font-black shadow-[0_0_10px_rgba(3,218,198,0.5)] animate-pulse"; } 
+            else if (state.coachData) {
+                populatedState.classList.remove('hidden'); statusBadge.innerText = 'Live Updated'; statusBadge.className = "text-[9px] uppercase tracking-wider bg-dark text-primary px-2 py-1 rounded-md font-bold border border-primary/50 shadow-[0_0_5px_rgba(187,134,252,0.3)]";
+                document.getElementById('coachFeedback').innerText = state.coachData.actionableFeedback; document.getElementById('coachTargetMeal').innerText = state.coachData.healthierVariation.targetMeal; 
+                document.getElementById('coachCleanAlt').innerText = state.coachData.healthierVariation.cleanAlternative; document.getElementById('coachAltMacros').innerText = state.coachData.healthierVariation.macros; 
+            } else { emptyState.classList.remove('hidden'); }
+        }
+
+        function triggerDebouncedCoachUpdate() {
+            if (coachUpdateTimer) clearTimeout(coachUpdateTimer);
+            coachUpdateTimer = setTimeout(() => { triggerBackgroundCoachUpdate(); }, 2000);
+        }
+
+        async function triggerBackgroundCoachUpdate() {
+            if (state.logs.length === 0) { state.coachData = null; renderCoachSection(); saveTodayToCloud(); return; }
+            if (!checkApiKey()) return;
+
+            state.isCoachLoading = true; renderCoachSection();
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${getApiKey()}`;
+                const systemInstruction = `You are an Elite AI Nutritionist embedded in a dashboard. Provide concise, highly actionable advice based on the user's latest logs. Keep feedback to one short sentence. DO NOT use markdown like asterisks.`;
+                const contextPrompt = `User Profile: ${state.profile.age}yo ${state.profile.gender}, ${state.profile.weight}kg. Goal: ${state.profile.goal}. Target Macros: ${state.goals.calories} kcal, ${state.goals.protein}g Pro. Logged Foods Today: ${JSON.stringify(state.logs.map(l => ({name: l.name, macros: l.calories+'kcal, P:'+l.protein+', C:'+l.carbs+', F:'+l.fats})))}
+                Task: 1. Provide 1 short sentence of actionable feedback. 2. Identify the heaviest/least optimal meal logged and provide a healthier, home-made variation that kills the craving but improves macros.`;
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemInstruction }] }, contents: [{ role: "user", parts: [{ text: contextPrompt }] }],
+                    generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { actionableFeedback: { type: "STRING" }, healthierVariation: { type: "OBJECT", properties: { targetMeal: { type: "STRING" }, cleanAlternative: { type: "STRING" }, macros: { type: "STRING" } }, required: ["targetMeal", "cleanAlternative", "macros"] } }, required: ["actionableFeedback", "healthierVariation"] } }
+                };
+                const data = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const jsonStr = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (jsonStr) state.coachData = JSON.parse(jsonStr);
+            } catch (error) { console.error("Coach Update Error:", error); } 
+            finally { state.isCoachLoading = false; renderCoachSection(); saveTodayToCloud(); }
+        }
+
+        window.autoResize = function(textarea) { 
+            textarea.style.height = 'auto'; textarea.style.height = (textarea.scrollHeight < 100 ? textarea.scrollHeight : 100) + 'px'; 
+            if(textarea.value === '') textarea.style.height = '44px'; 
+        };
+
+        window.handleInput = function(textarea) { window.autoResize(textarea); window.updatePredictions(textarea.value); };
+        
+        window.updatePredictions = function(text) {
+            const container = document.getElementById('quickPrompts'); const query = text.trim().toLowerCase();
+            if (!query) { container.classList.add('hidden'); return; }
+            const matches = commonFoods.filter(f => f.text.toLowerCase().includes(query));
+            if (matches.length === 0) { container.classList.add('hidden'); return; }
+            container.innerHTML = matches.map(f => `<button onclick="window.setQuickPrompt('${f.text}')" class="shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-3 py-1.5 rounded-full hover:border-primary transition-colors whitespace-nowrap shadow-md">${f.icon} ${f.text}</button>`).join('');
+            container.classList.remove('hidden');
+        };
+
+        window.setQuickPrompt = function(text) {
+            const input = document.getElementById('foodInput'); input.value = text; window.autoResize(input);
+            document.getElementById('quickPrompts').classList.add('hidden'); input.focus();
+        };
+
+        window.addWater = function(amount) { 
+            let newVal = state.current.waterIntake + amount; if(newVal < 0) newVal = 0; state.current.waterIntake = newVal; 
+            saveTodayToCloud(); updateDashboard(); if(amount > 0) window.showToast(`+${amount}ml Water logged`, 'success');
+        };
+        
+        window.handleImageSelection = function(event) {
+            const file = event.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(e) {
+                currentBase64Image = e.target.result.split(',')[1]; document.getElementById('imagePreview').src = e.target.result;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden'); document.getElementById('imagePreviewContainer').classList.add('inline-block');
+            }
+            reader.readAsDataURL(file);
+        };
+        
+        window.clearImage = function() { currentBase64Image = null; document.getElementById('cameraInput').value = ''; document.getElementById('imagePreviewContainer').classList.add('hidden'); document.getElementById('imagePreviewContainer').classList.remove('inline-block'); };
+        window.deleteLog = function(id) { state.logs = state.logs.filter(log => log.id !== id); saveTodayToCloud(); window.showToast("Log deleted"); triggerDebouncedCoachUpdate(); };
+        window.confirmClearLogs = function() {
+            if(state.logs.length === 0) return;
+            window.showConfirmModal("Clear Diary?", "Are you sure you want to delete all food logs for today?", () => { state.logs = []; state.coachData = null; saveTodayToCloud(); renderCoachSection(); window.showToast("Diary cleared"); });
+        };
+
+        window.showSettings = function() {
+            document.getElementById('profApiKey').value = state.profile.apiKey || '';
+            document.getElementById('profCountry').value = state.profile.country || 'Australia'; 
+            document.getElementById('profDiet').value = state.profile.diet || 'None'; 
+            document.getElementById('profAge').value = state.profile.age || ''; 
+            document.getElementById('profGender').value = state.profile.gender || 'male'; 
+            document.getElementById('profHeight').value = state.profile.height || ''; 
+            document.getElementById('profWeight').value = state.profile.weight || ''; 
+            document.getElementById('profActivity').value = state.profile.activityLevel || '1.2'; 
+            document.getElementById('profGoal').value = state.profile.goal || 'maintain';
+            if(state.profile.setupComplete && state.profile.apiKey) document.getElementById('closeSettingsBtn').classList.remove('hidden');
+            else document.getElementById('closeSettingsBtn').classList.add('hidden');
+            window.liveCalculate(); 
+            const modal = document.getElementById('settingsModal'); const inner = document.getElementById('settingsModalInner');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => inner.classList.remove('translate-y-full'), 10);
+        };
+        
+        window.hideSettings = function() { 
+            if(state.profile.setupComplete && state.profile.apiKey) { 
+                const inner = document.getElementById('settingsModalInner'); inner.classList.add('translate-y-full');
+                setTimeout(() => { document.getElementById('settingsModal').classList.add('hidden'); document.getElementById('settingsModal').classList.remove('flex'); }, 300);
+            } else {
+                window.showToast("API Key and basic info required", "error");
+            }
+        };
+
+        window.liveCalculate = function() {
+            const country = document.getElementById('profCountry').value; const diet = document.getElementById('profDiet').value; const age = parseInt(document.getElementById('profAge').value); const gender = document.getElementById('profGender').value; const height = parseInt(document.getElementById('profHeight').value); const weight = parseFloat(document.getElementById('profWeight').value); const activity = parseFloat(document.getElementById('profActivity').value); const goal = document.getElementById('profGoal').value;
+            if (!age || !height || !weight) { document.getElementById('calcCals').innerText = "-"; document.getElementById('calcPro').innerText = "-"; document.getElementById('calcCarb').innerText = "-"; document.getElementById('calcFat').innerText = "-"; return null; }
+            let bmr = (10 * weight) + (6.25 * height) - (5 * age); bmr += (gender === 'male') ? 5 : -161; let tdee = bmr * activity; let targetCals = tdee;
+            if (goal === 'cut') targetCals -= 500; if (goal === 'bulk') targetCals += 300; targetCals = Math.round(targetCals);
+            let protein = Math.round(weight * 2.2); let fats = Math.round(weight * 0.9); let proteinCals = protein * 4; let fatCals = fats * 9; let carbCals = targetCals - (proteinCals + fatCals); if (carbCals < 0) carbCals = 0; let carbs = Math.round(carbCals / 4);
+            document.getElementById('calcCals').innerText = targetCals; document.getElementById('calcPro').innerText = protein; document.getElementById('calcCarb').innerText = carbs; document.getElementById('calcFat').innerText = fats;
+            return { targetCals, protein, carbs, fats, age, gender, height, weight, activity, goal, country, diet };
+        };
+
+        window.saveSettings = function() {
+            const apiKey = document.getElementById('profApiKey').value.trim();
+            if(!apiKey) { window.showToast("Please enter a Gemini API Key", "error"); return; }
+
+            const result = window.liveCalculate(); if (!result) { window.showToast("Please fill all physical metrics", "error"); return; }
+            state.profile = { ...state.profile, apiKey: apiKey, country: result.country, diet: result.diet, age: result.age, gender: result.gender, height: result.height, weight: result.weight, activityLevel: result.activity.toString(), goal: result.goal, setupComplete: true };
+            state.goals = { calories: result.targetCals, protein: result.protein, carbs: result.carbs, fats: result.fats, addedSugar: 36, water: 3000 };
+            saveGoalsAndProfileToCloud(); 
+            document.getElementById('apiKeyWarning').classList.add('hidden');
+            document.getElementById('closeSettingsBtn').classList.remove('hidden'); 
+            window.hideSettings();
+            window.showToast("Profile & API Key Saved");
+        };
+
+        function setButtonStatus(status) {
+            const icon = document.getElementById('submitIcon'); const loader = document.getElementById('submitLoader'); const btn = document.getElementById('submitBtn'); const statusTxt = document.getElementById('apiStatusText');
+            if (status === 'initial') { icon.classList.add('hidden'); loader.classList.remove('hidden'); btn.disabled = true; statusTxt.innerText = "Estimating Macros..."; statusTxt.classList.remove('hidden'); } 
+            else if (status === 'verifying') { statusTxt.innerText = "Auditing Accuracy..."; } 
+            else { icon.classList.remove('hidden'); loader.classList.add('hidden'); btn.disabled = false; statusTxt.classList.add('hidden'); }
+        }
+
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            let delay = 1000;
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay)); delay *= 2;
+                }
+            }
+        }
+
+        window.logFood = async function() {
+            if (!checkApiKey()) return;
+            const inputEl = document.getElementById('foodInput'); const text = inputEl.value.trim(); const errorMsg = document.getElementById('apiErrorMsg');
+            if (!text && !currentBase64Image) return;
+            errorMsg.classList.add('hidden'); setButtonStatus('initial');
+            window.updatePredictions('');
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${getApiKey()}`;
+                
+                const sys1 = `You are an AI Calorie Tracker. Estimate macronutrients and vitamins as accurately as possible. Return ONLY JSON.`;
+                let parts1 = []; if (text) parts1.push({ text: text }); else parts1.push({ text: "Analyze this food for full macro and micro nutrients." });
+                if (currentBase64Image) parts1.push({ inlineData: { mimeType: "image/jpeg", data: currentBase64Image } });
+
+                const payload1 = { systemInstruction: { parts: [{ text: sys1 }] }, contents: [{ role: "user", parts: parts1 }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { foodName: { type: "STRING" }, calories: { type: "INTEGER" }, protein: { type: "INTEGER" }, carbs: { type: "INTEGER" }, fats: { type: "INTEGER" }, naturalSugar: { type: "INTEGER" }, addedSugar: { type: "INTEGER" }, micros: { type: "OBJECT", properties: { vitA: { type: "NUMBER" }, vitC: { type: "NUMBER" }, vitD: { type: "NUMBER" }, calcium: { type: "NUMBER" }, iron: { type: "NUMBER" }, magnesium: { type: "NUMBER" }, potassium: { type: "NUMBER" }, sodium: { type: "NUMBER" }, zinc: { type: "NUMBER" } } } }, required: ["foodName", "calories", "protein", "carbs", "fats", "naturalSugar", "addedSugar", "micros"] } } };
+
+                const res1 = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload1) });
+                const jsonStr1 = res1.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonStr1) throw new Error("No valid response");
+                
+                setButtonStatus('verifying');
+                const sys2 = `You are an Elite Nutritional Auditor. Review preliminary macro estimation for accuracy based on typical portion sizes. Provide a short critique, confidence score (0-100), and CORRECTED JSON.`;
+                let parts2 = [ { text: `Original Input: ${text || "Image provided"}` }, { text: `Preliminary Estimation: ${jsonStr1}` }, { text: `Critique and correct data.` } ];
+                if (currentBase64Image) parts2.push({ inlineData: { mimeType: "image/jpeg", data: currentBase64Image } });
+
+                const payload2 = { systemInstruction: { parts: [{ text: sys2 }] }, contents: [{ role: "user", parts: parts2 }], generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { critiqueReasoning: { type: "STRING" }, confidenceScore: { type: "INTEGER" }, correctedData: { type: "OBJECT", properties: { foodName: { type: "STRING" }, calories: { type: "INTEGER" }, protein: { type: "INTEGER" }, carbs: { type: "INTEGER" }, fats: { type: "INTEGER" }, naturalSugar: { type: "INTEGER" }, addedSugar: { type: "INTEGER" }, micros: { type: "OBJECT", properties: { vitA: { type: "NUMBER" }, vitC: { type: "NUMBER" }, vitD: { type: "NUMBER" }, calcium: { type: "NUMBER" }, iron: { type: "NUMBER" }, magnesium: { type: "NUMBER" }, potassium: { type: "NUMBER" }, sodium: { type: "NUMBER" }, zinc: { type: "NUMBER" } } } }, required: ["foodName", "calories", "protein", "carbs", "fats", "naturalSugar", "addedSugar", "micros"] } }, required: ["critiqueReasoning", "confidenceScore", "correctedData"] } } };
+
+                const res2 = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload2) });
+                const jsonStr2 = res2.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonStr2) throw new Error("No valid response");
+                
+                const finalResult = JSON.parse(jsonStr2); const resultData = finalResult.correctedData;
+                
+                currentPendingFood = { id: Date.now().toString(), name: resultData.foodName || "Unknown Food", calories: resultData.calories || 0, protein: resultData.protein || 0, carbs: resultData.carbs || 0, fats: resultData.fats || 0, naturalSugar: resultData.naturalSugar || 0, addedSugar: resultData.addedSugar || 0, micros: resultData.micros || {}, timestamp: new Date().getTime() };
+
+                showResultModal(currentPendingFood, finalResult.confidenceScore, finalResult.critiqueReasoning);
+                inputEl.value = ''; inputEl.style.height = '44px'; window.clearImage();
+            } catch (error) { console.error("API Error:", error); errorMsg.innerText = "Network Error. Check API Key or Connection."; errorMsg.classList.remove('hidden'); } 
+            finally { setButtonStatus('done'); }
+        };
+
+        function showResultModal(foodObj, score, critique) {
+            const badge = document.getElementById('accuracyBadge'); badge.innerText = `${score}%`;
+            if (score >= 90) badge.className = "text-sm font-black text-secondary drop-shadow-md"; else if (score >= 70) badge.className = "text-sm font-black text-warning drop-shadow-md"; else badge.className = "text-sm font-black text-error drop-shadow-md";
+
+            document.getElementById('accuracyCritique').innerText = `"${critique}"`;
+
+            const list = document.getElementById('detectedMacrosList');
+            list.innerHTML = `
+                <div class="flex justify-between items-center bg-surfaceLight p-4 rounded-2xl border border-gray-700 shadow-sm"><span class="text-gray-400 text-sm font-bold uppercase tracking-wider">Food</span><span class="font-black text-white text-right max-w-[60%] leading-tight">${foodObj.name}</span></div>
+                <div class="flex justify-between items-center bg-surfaceLight p-4 rounded-2xl border border-gray-700 shadow-sm mt-3"><span class="text-gray-400 text-sm font-bold uppercase tracking-wider">Calories</span><span class="font-black text-orange-400 text-lg flex items-center"><i class="fas fa-fire text-sm mr-1"></i> ${foodObj.calories}</span></div>
+                <div class="grid grid-cols-3 gap-3 mt-3 mb-3">
+                    <div class="bg-surfaceLight p-3 rounded-2xl border border-gray-700 text-center shadow-sm"><div class="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Protein</div><div class="font-black text-white text-lg">${foodObj.protein}g</div></div>
+                    <div class="bg-surfaceLight p-3 rounded-2xl border border-gray-700 text-center shadow-sm"><div class="text-[10px] font-bold uppercase tracking-wider text-yellow-400 mb-1">Carbs</div><div class="font-black text-white text-lg">${foodObj.carbs}g</div></div>
+                    <div class="bg-surfaceLight p-3 rounded-2xl border border-gray-700 text-center shadow-sm"><div class="text-[10px] font-bold uppercase tracking-wider text-red-400 mb-1">Fats</div><div class="font-black text-white text-lg">${foodObj.fats}g</div></div>
+                </div>
+            `;
+            document.getElementById('resultModal').classList.remove('hidden'); document.getElementById('resultModal').classList.add('flex');
+        }
+
+        window.closeResultModal = function(confirmAdd) {
+            document.getElementById('resultModal').classList.add('hidden'); document.getElementById('resultModal').classList.remove('flex');
+            if (confirmAdd && currentPendingFood) { state.logs.push(currentPendingFood); saveTodayToCloud(); window.showToast("Successfully logged!"); triggerDebouncedCoachUpdate(); }
+            currentPendingFood = null;
+        };
+
+        function appendMessage(role, text) {
+            const container = document.getElementById('chatContainer'); const div = document.createElement('div');
+            if (role === 'user') {
+                div.className = "flex items-end justify-end gap-2 mt-4 animate-slide-up";
+                div.innerHTML = `<div class="chat-user p-4 rounded-2xl text-sm shadow-lg max-w-[85%] font-medium leading-relaxed">${text}</div>`;
+            } else {
+                div.className = "flex items-start gap-3 mt-4 animate-slide-up";
+                let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-bold">$1</strong>').replace(/\*(.*?)\*/g, '<em class="text-gray-300">$1</em>').replace(/\n/g, '<br>');
+                div.innerHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-blue-500 flex items-center justify-center shrink-0 shadow-md border border-dark"><i class="fas fa-stethoscope text-dark text-sm"></i></div><div class="chat-expert p-4 rounded-2xl rounded-tl-sm text-sm shadow-lg max-w-[85%] leading-relaxed font-medium text-gray-300">${formattedText}</div>`;
+            }
+            container.appendChild(div); container.scrollTop = container.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const container = document.getElementById('chatContainer'); const div = document.createElement('div'); div.id = 'typingIndicator'; div.className = "flex items-center gap-3 mt-4 mb-2";
+            div.innerHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-blue-500 flex items-center justify-center shrink-0 border border-dark"><i class="fas fa-stethoscope text-dark text-sm"></i></div><div class="chat-expert px-5 py-4 rounded-2xl rounded-tl-sm shadow-md"><div class="typing-indicator"></div></div>`;
+            container.appendChild(div); container.scrollTop = container.scrollHeight;
+        }
+        function removeTypingIndicator() { const el = document.getElementById('typingIndicator'); if (el) el.remove(); }
+
+        window.handleChatKeyPress = function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendChatMessage(); } };
+
+        window.sendChatMessage = async function() {
+            if (!checkApiKey()) return;
+            const inputEl = document.getElementById('chatInput'); const text = inputEl.value.trim(); if (!text) return;
+            inputEl.value = ''; inputEl.style.height = '44px'; appendMessage('user', text); state.chatHistory.push({ role: "user", parts: [{ text: text }] });
+            const btn = document.getElementById('sendChatBtn'); btn.disabled = true; showTypingIndicator();
+
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${getApiKey()}`;
+                let contextStr = `[SYSTEM CONTEXT]\nUser Profile: ${state.profile.age}yo ${state.profile.gender}, ${state.profile.weight}kg. Country: ${state.profile.country}. Goal: ${state.profile.goal}. Diet: ${state.profile.diet}. Activity: ${state.profile.activityLevel}.\nTarget Macros: ${state.goals.calories}kcal, ${state.goals.protein}g P.\n\n[TODAY'S LOGS]\n`;
+                if (state.logs.length === 0) contextStr += "User has not logged any food today yet.\n"; else state.logs.forEach(l => { contextStr += `- ${l.name} (${l.calories}kcal, P:${l.protein}g)\n`; });
+                const systemInstruction = `You are an Elite AI Health & Nutrition Expert chatting with a client. Be conversational, direct, and highly authoritative. USE THE PROVIDED [SYSTEM CONTEXT]. Keep responses under 100 words. Use formatting.`;
+                let conversationContents = [{ role: "user", parts: [{ text: contextStr + "Please review my profile." }] }, { role: "model", parts: [{ text: "Profile reviewed. Ready." }] }].concat(state.chatHistory);
+                const payload = { systemInstruction: { parts: [{ text: systemInstruction }] }, contents: conversationContents };
+
+                const res = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const replyText = res.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!replyText) throw new Error("Empty response");
+
+                removeTypingIndicator(); appendMessage('model', replyText); state.chatHistory.push({ role: "model", parts: [{ text: replyText }] });
+            } catch (error) { console.error("Chat Error:", error); removeTypingIndicator(); appendMessage('model', "Connection error. Please try again."); state.chatHistory.pop(); 
+            } finally { btn.disabled = false; }
+        };
+
+        // --- RECIPE GENERATOR & LOGGING LOGIC ---
+        
+        window.setRecipeMode = function(mode) {
+            state.recipeMode = mode;
+            const dBtn = document.getElementById('modeDiscoverBtn'); const pBtn = document.getElementById('modePantryBtn');
+            const pantryInput = document.getElementById('pantryInputArea');
+            if (mode === 'discover') {
+                dBtn.className = "flex-1 py-2 rounded-lg bg-surfaceLight text-primary font-black text-[11px] uppercase tracking-wider shadow-sm transition-all";
+                pBtn.className = "flex-1 py-2 rounded-lg text-gray-500 font-bold text-[11px] uppercase tracking-wider hover:text-gray-300 transition-all";
+                pantryInput.classList.add('hidden');
+                document.getElementById('pantryIngredients').value = '';
+            } else {
+                pBtn.className = "flex-1 py-2 rounded-lg bg-surfaceLight text-primary font-black text-[11px] uppercase tracking-wider shadow-sm transition-all";
+                dBtn.className = "flex-1 py-2 rounded-lg text-gray-500 font-bold text-[11px] uppercase tracking-wider hover:text-gray-300 transition-all";
+                pantryInput.classList.remove('hidden');
+            }
+        };
+
+        window.setRecipeFilter = function(filter) {
+            state.recipeFilter = filter;
+            const container = document.getElementById('recipeFilters');
+            Array.from(container.children).forEach(btn => {
+                if (btn.innerText === filter) { btn.className = "shrink-0 bg-primary/20 border border-primary text-primary text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors"; } 
+                else { btn.className = "shrink-0 bg-surface border border-gray-700 text-gray-300 text-[10px] font-bold px-4 py-1.5 rounded-full transition-colors hover:border-primary/50"; }
+            });
+            window.generateRecipes(true); // Auto fetch when filter changes
+        };
+
+        window.openRecipeModal = function(index) {
+            const recipe = state.recipes[index]; if (!recipe) return;
+            document.getElementById('rdTitle').innerText = recipe.title;
+            document.getElementById('rdDesc').innerText = recipe.description;
+            document.getElementById('rdCals').innerText = recipe.calories; document.getElementById('rdPro').innerText = `${recipe.protein}g`; document.getElementById('rdCarb').innerText = `${recipe.carbs}g`; document.getElementById('rdFat').innerText = `${recipe.fats}g`;
+            
+            document.getElementById('rdTags').innerHTML = `
+                <span class="bg-dark px-3 py-1 rounded-lg border border-gray-700 text-xs font-bold text-primary"><i class="far fa-clock"></i> ${recipe.prepTime}</span>
+                ${state.profile.diet !== 'None' ? `<span class="bg-dark px-3 py-1 rounded-lg border border-gray-700 text-xs font-bold text-secondary">${state.profile.diet}</span>` : ''}
+            `;
+            
+            document.getElementById('rdIngredients').innerHTML = recipe.ingredients.map(i => `<li class="flex items-start gap-3"><div class="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div> <span class="leading-snug">${i}</span></li>`).join('');
+            document.getElementById('rdInstructions').innerHTML = recipe.instructions.map((step, idx) => `<li class="flex items-start gap-3"><div class="w-5 h-5 rounded-full bg-surfaceLight border border-gray-700 text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5 text-secondary">${idx+1}</div> <span class="leading-relaxed">${step}</span></li>`).join('');
+            
+            document.getElementById('rdLogBtn').onclick = () => { window.logRecipeAsFood(index); window.closeRecipeModal(); };
+            
+            document.body.classList.add('modal-open');
+            const modal = document.getElementById('recipeDetailModal');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
+        };
+
+        window.closeRecipeModal = function() {
+            const modal = document.getElementById('recipeDetailModal');
+            modal.classList.add('translate-y-full');
+            document.body.classList.remove('modal-open');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        };
+
+        window.logRecipeAsFood = function(index) {
+            const recipe = state.recipes[index]; if (!recipe) return;
+            const foodObj = { id: Date.now().toString(), name: recipe.title, calories: recipe.calories, protein: recipe.protein, carbs: recipe.carbs, fats: recipe.fats, naturalSugar: 0, addedSugar: 0, micros: {}, timestamp: new Date().getTime() };
+            state.logs.push(foodObj); saveTodayToCloud(); window.showToast(`Logged: ${recipe.title}`, 'success'); triggerDebouncedCoachUpdate();
+        };
+
+        function renderRecipes() {
+            const container = document.getElementById('recipeContainer'); container.innerHTML = '';
+            state.recipes.forEach((recipe, index) => {
+                const div = document.createElement('div');
+                div.className = "bg-surface border border-gray-800 rounded-3xl p-5 recipe-card shadow-xl relative overflow-hidden group";
+                div.onclick = () => window.openRecipeModal(index);
+                div.innerHTML = `
+                    <div class="absolute -right-10 -top-10 bg-primary/5 w-32 h-32 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none"></div>
+                    <div class="flex justify-between items-start mb-3 relative z-10">
+                        <h3 class="font-black text-white text-lg leading-tight pr-2">${recipe.title}</h3>
+                        <span class="bg-dark text-gray-400 text-[10px] px-2.5 py-1 rounded-lg border border-gray-700 whitespace-nowrap shadow-inner font-bold uppercase tracking-wider shrink-0"><i class="far fa-clock text-primary"></i> ${recipe.prepTime}</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mb-4 font-medium leading-relaxed relative z-10 line-clamp-2">${recipe.description}</p>
+                    
+                    <div class="grid grid-cols-4 gap-2 mb-4 relative z-10">
+                        <div class="bg-orange-500/10 text-orange-400 rounded-lg p-2 text-center border border-orange-500/20"><div class="text-[9px] uppercase tracking-widest font-bold mb-0.5">Cals</div><div class="text-xs font-black">${recipe.calories}</div></div>
+                        <div class="bg-blue-500/10 text-blue-400 rounded-lg p-2 text-center border border-blue-500/20"><div class="text-[9px] uppercase tracking-widest font-bold mb-0.5">Pro</div><div class="text-xs font-black">${recipe.protein}g</div></div>
+                        <div class="bg-yellow-500/10 text-yellow-400 rounded-lg p-2 text-center border border-yellow-500/20"><div class="text-[9px] uppercase tracking-widest font-bold mb-0.5">Carb</div><div class="text-xs font-black">${recipe.carbs}g</div></div>
+                        <div class="bg-red-500/10 text-red-400 rounded-lg p-2 text-center border border-red-500/20"><div class="text-[9px] uppercase tracking-widest font-bold mb-0.5">Fat</div><div class="text-xs font-black">${recipe.fats}g</div></div>
+                    </div>
+                    
+                    <div class="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1"><i class="fas fa-hand-pointer text-primary/50"></i> Tap to view full recipe</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        window.generateRecipes = async function(isRefresh = false) {
+            if (!checkApiKey()) return;
+            if (state.isFetchingRecipes) return;
+            
+            document.getElementById('recipesInitialState').classList.add('hidden');
+            const loaderTrigger = document.getElementById('recipeScrollTrigger');
+            
+            if(isRefresh) {
+                state.recipes = [];
+                document.getElementById('recipeContainer').innerHTML = '';
+                document.getElementById('recipesLoadingState').classList.remove('hidden');
+                loaderTrigger.classList.add('hidden');
+            } else {
+                loaderTrigger.classList.remove('hidden');
+            }
+            
+            state.isFetchingRecipes = true;
+            
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${getApiKey()}`;
+                
+                let tasteProfile = "general healthy food";
+                if(state.logs.length > 0) tasteProfile = state.logs.slice(0, 10).map(l => l.name).join(", ");
+
+                let promptStr = `User Country: ${state.profile.country}. Goal: ${state.profile.goal}. Dietary Requirement: ${state.profile.diet}. Target roughly ${(state.goals.calories/3).toFixed(0)} calories per meal. Filter requested: ${state.recipeFilter}. Return ONLY JSON array.`;
+                
+                if (state.recipeMode === 'pantry') {
+                    const pantryStr = document.getElementById('pantryIngredients').value.trim();
+                    if (!pantryStr) { window.showToast("Enter ingredients first!", "error"); state.isFetchingRecipes = false; document.getElementById('recipesLoadingState').classList.add('hidden'); return; }
+                    promptStr += `\nCRITICAL: The user only has these main ingredients: [${pantryStr}]. Build 3 recipes utilizing these. You may assume basic pantry staples (oil, salt, spices) are available.`;
+                } else {
+                    promptStr += `\nRecent foods logged (to infer taste preferences): ${tasteProfile}. Provide 3 unique recipes NOT in this list: ${state.recipes.map(r=>r.title).join(',')}.`;
+                }
+
+                const systemInstruction = `You are a Master Culinary AI. Generate 3 unique, appetizing recipes perfectly tailored to the requested macro goals, dietary requirements, and available ingredients. Provide detailed ingredients and step-by-step instructions.`;
+
+                const payload = {
+                    systemInstruction: { parts: [{ text: systemInstruction }] }, contents: [{ role: "user", parts: [{ text: promptStr }] }],
+                    generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { title: { type: "STRING" }, description: { type: "STRING" }, prepTime: { type: "STRING" }, calories: { type: "INTEGER" }, protein: { type: "INTEGER" }, carbs: { type: "INTEGER" }, fats: { type: "INTEGER" }, ingredients: { type: "ARRAY", items: { type: "STRING" } }, instructions: { type: "ARRAY", items: { type: "STRING" } } }, required: ["title", "description", "prepTime", "calories", "protein", "carbs", "fats", "ingredients", "instructions"] } } }
+                };
+
+                const res = await fetchWithRetry(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const jsonStr = res.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!jsonStr) throw new Error("Empty response");
+                
+                const newRecipes = JSON.parse(jsonStr);
+                state.recipes = [...state.recipes, ...newRecipes];
+                
+                document.getElementById('recipesLoadingState').classList.add('hidden');
+                loaderTrigger.classList.remove('hidden');
+                renderRecipes();
+
+            } catch (error) {
+                console.error("Recipe API Error:", error);
+                if(isRefresh) { document.getElementById('recipesLoadingState').classList.add('hidden'); document.getElementById('recipesInitialState').classList.remove('hidden'); }
+                loaderTrigger.classList.add('hidden');
+                window.showToast("Failed to generate menu.", "error");
+            } finally {
+                state.isFetchingRecipes = false;
+            }
+        };
+
+    </script>
+</body>
+</html>

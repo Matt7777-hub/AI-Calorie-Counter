@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,11 +11,22 @@
             theme: {
                 extend: {
                     colors: {
-                        dark: '#121212',
-                        surface: '#1e1e1e',
+                        dark: '#0f0f11',
+                        surface: '#1c1c1f',
+                        surfaceLight: '#2a2a2e',
                         primary: '#bb86fc',
                         secondary: '#03dac6',
                         error: '#cf6679',
+                        warning: '#ffb74d',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                        'slide-up': 'slideUp 0.4s ease-out forwards',
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
                     }
                 }
             }
@@ -24,334 +34,247 @@
     </script>
     <style>
         body {
-            background-color: #121212;
-            color: #ffffff;
+            background-color: #0f0f11; color: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none;
         }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #121212; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
         
         .glass-panel {
-            background: rgba(30, 30, 30, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(28, 28, 31, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .progress-bar { transition: width 0.5s ease-in-out; }
+        .progress-bar { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
         
         .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            border-top: 3px solid #bb86fc;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
+            border: 3px solid rgba(255,255,255,0.1); border-radius: 50%; border-top: 3px solid #bb86fc;
+            width: 20px; height: 20px; animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .coach-shimmer {
+            animation: shimmer 2s infinite linear;
+            background: linear-gradient(to right, #1c1c1f 4%, #2a2a2e 25%, #1c1c1f 36%); background-size: 1000px 100%;
         }
+        @keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
+        
+        .chat-user { background: linear-gradient(135deg, #bb86fc, #9965f4); color: #121212; border-bottom-right-radius: 4px; }
+        .chat-expert { background-color: #1c1c1f; border: 1px solid #333; color: #ffffff; border-bottom-left-radius: 4px; }
+        
+        .typing-indicator { width: 8px; height: 8px; border-radius: 50%; background-color: transparent; box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; transform: translateX(-9999px); margin-left: 15px; margin-top: 5px; animation: dot-typing 1.5s infinite linear;}
+        @keyframes dot-typing {
+            0%, 66.667%, 100% { box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            16.667% { box-shadow: 9984px -10px 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            33.333% { box-shadow: 9984px 0 0 0 #03dac6, 9999px -10px 0 0 #03dac6, 10014px 0 0 0 #03dac6; }
+            50% { box-shadow: 9984px 0 0 0 #03dac6, 9999px 0 0 0 #03dac6, 10014px -10px 0 0 #03dac6; }
+        }
+        
+        .recipe-card { break-inside: avoid; margin-bottom: 1rem; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+        .recipe-card:active { transform: scale(0.98); }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .toast-enter { animation: toastSlideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .toast-exit { animation: toastSlideOut 0.3s ease-in forwards; }
+        @keyframes toastSlideIn { 0% { transform: translateY(-100%); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes toastSlideOut { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-100%); opacity: 0; } }
+
+        #quickPrompts { transition: all 0.2s ease-out; max-height: 50px; opacity: 1; }
+        #quickPrompts.hidden { max-height: 0; opacity: 0; margin-bottom: 0; padding-bottom: 0; border: none; overflow: hidden; display: block; pointer-events: none; }
+        
+        /* Modal body scroll lock */
+        body.modal-open { overflow: hidden; }
     </style>
 </head>
-<body class="antialiased pb-24">
+<body class="antialiased bg-dark text-white flex justify-center">
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed top-20 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4"></div>
 
     <!-- App Container -->
-    <div class="max-w-md mx-auto min-h-screen flex flex-col relative shadow-2xl">
+    <div class="w-full max-w-md min-h-screen flex flex-col relative shadow-2xl bg-dark">
         
         <!-- Header -->
-        <header class="p-5 flex justify-between items-center sticky top-0 z-10 glass-panel">
+        <header class="p-5 flex justify-between items-center sticky top-0 z-40 glass-panel">
             <div>
-                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2" id="headerTitle">
                     Elite Coach
-                    <i id="syncIcon" class="fas fa-cloud-upload-alt text-xs text-secondary opacity-50"></i>
+                    <i id="syncIcon" class="fas fa-cloud-upload-alt text-[10px] text-secondary opacity-50 transition-colors duration-300"></i>
                 </h1>
-                <p class="text-xs text-gray-400" id="currentDate">Today</p>
+                <p class="text-xs text-gray-400 font-medium" id="currentDate">Today</p>
             </div>
-            <button class="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-primary shadow-lg border border-gray-700" onclick="window.showSettings()">
-                <i class="fas fa-user-cog"></i>
-            </button>
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-center justify-center bg-surfaceLight px-3 py-1 rounded-xl border border-gray-700 shadow-inner">
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Streak</span>
+                    <span class="text-sm font-bold text-orange-400 flex items-center gap-1"><i class="fas fa-fire"></i> <span id="streakCount">0</span></span>
+                </div>
+                <button class="w-10 h-10 rounded-full bg-surface flex items-center justify-center text-primary shadow-lg border border-gray-700 hover:bg-surfaceLight transition-colors relative" onclick="window.showSettings()">
+                    <i class="fas fa-user-cog"></i>
+                    <div id="apiKeyWarning" class="absolute -top-1 -right-1 w-3 h-3 bg-error rounded-full hidden border-2 border-dark"></div>
+                </button>
+            </div>
         </header>
 
-        <!-- Main Dashboard -->
-        <main class="flex-1 p-4 space-y-6">
-            
+        <!-- ============================================== -->
+        <!-- TAB 1: OVERVIEW DASHBOARD -->
+        <!-- ============================================== -->
+        <main id="tabDashboard" class="flex-1 p-4 space-y-6 pb-48 overflow-y-auto animate-fade-in">
             <!-- Calorie Ring / Summary -->
-            <div class="bg-surface rounded-3xl p-6 shadow-lg border border-gray-800 flex flex-col items-center relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary"></div>
-                <h2 class="text-sm text-gray-400 font-medium mb-1">CALORIES REMAINING</h2>
-                <div class="text-5xl font-extrabold my-2 text-white" id="calsRemaining">...</div>
+            <div class="bg-surface rounded-3xl p-6 shadow-2xl border border-gray-800 flex flex-col items-center relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-blue-500 to-secondary opacity-80"></div>
+                <div class="absolute -inset-24 bg-primary/5 blur-[100px] rounded-full z-0 pointer-events-none"></div>
                 
-                <div class="flex justify-between w-full mt-4 text-xs text-gray-400 px-2">
-                    <div class="text-center">
-                        <div class="text-white font-bold text-sm" id="calsGoal">-</div>
-                        <div>Base</div>
+                <h2 class="text-xs text-gray-400 font-bold tracking-widest uppercase mb-1 relative z-10">Calories Remaining</h2>
+                <div class="text-6xl font-black my-2 tracking-tighter relative z-10 drop-shadow-lg" id="calsRemaining">...</div>
+                
+                <div class="flex justify-between w-full mt-6 text-xs text-gray-400 px-4 relative z-10 bg-dark/50 py-3 rounded-2xl border border-gray-800/50">
+                    <div class="text-center w-1/3">
+                        <div class="text-white font-bold text-base" id="calsGoal">-</div>
+                        <div class="text-[10px] uppercase tracking-wider mt-1">Goal</div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-secondary font-bold text-sm" id="activeBonus">+0</div>
-                        <div>Active Bonus</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-error font-bold text-sm" id="calsEaten">0</div>
-                        <div>Eaten</div>
+                    <div class="w-px bg-gray-700"></div>
+                    <div class="text-center w-1/3">
+                        <div class="text-error font-bold text-base" id="calsEaten">0</div>
+                        <div class="text-[10px] uppercase tracking-wider mt-1">Eaten</div>
                     </div>
                 </div>
             </div>
 
             <!-- Macros Grid -->
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="text-blue-400 font-medium">Protein</span>
-                        <span class="text-white"><span id="proteinCurrent">0</span> / <span id="proteinGoal" class="text-gray-500">-</span></span>
+            <div class="animate-slide-up" style="animation-delay: 0.1s;">
+                <h3 class="text-[11px] font-bold text-gray-500 mb-3 tracking-widest uppercase px-1 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-gray-600"></i> Macronutrients
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-blue-400 font-bold text-sm">Protein</span>
+                            <span class="text-white text-xs font-medium"><span id="proteinCurrent" class="text-sm">0</span> / <span id="proteinGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="proteinBar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(59,130,246,0.5)]" style="width: 0%"></div>
+                        </div>
                     </div>
-                    <div class="w-full bg-gray-800 rounded-full h-2">
-                        <div id="proteinBar" class="bg-blue-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-yellow-400 font-bold text-sm">Carbs</span>
+                            <span class="text-white text-xs font-medium"><span id="carbsCurrent" class="text-sm">0</span> / <span id="carbsGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="carbsBar" class="bg-gradient-to-r from-yellow-600 to-yellow-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(234,179,8,0.5)]" style="width: 0%"></div>
+                        </div>
                     </div>
-                </div>
-                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="text-yellow-400 font-medium">Carbs</span>
-                        <span class="text-white"><span id="carbsCurrent">0</span> / <span id="carbsGoal" class="text-gray-500">-</span></span>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-red-400 font-bold text-sm">Fats</span>
+                            <span class="text-white text-xs font-medium"><span id="fatsCurrent" class="text-sm">0</span> / <span id="fatsGoal" class="text-gray-500">-</span></span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="fatsBar" class="bg-gradient-to-r from-red-600 to-red-400 h-full rounded-full progress-bar shadow-[0_0_10px_rgba(239,68,68,0.5)]" style="width: 0%"></div>
+                        </div>
                     </div>
-                    <div class="w-full bg-gray-800 rounded-full h-2">
-                        <div id="carbsBar" class="bg-yellow-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="text-red-400 font-medium">Fats</span>
-                        <span class="text-white"><span id="fatsCurrent">0</span> / <span id="fatsGoal" class="text-gray-500">-</span></span>
-                    </div>
-                    <div class="w-full bg-gray-800 rounded-full h-2">
-                        <div id="fatsBar" class="bg-red-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
-                    </div>
-                </div>
-                <div class="bg-surface rounded-2xl p-4 border border-gray-800">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="text-purple-400 font-medium">Sugar</span>
-                        <span class="text-white"><span id="sugarCurrent">0</span> / <span id="sugarGoal" class="text-gray-500">-</span></span>
-                    </div>
-                    <div class="w-full bg-gray-800 rounded-full h-2">
-                        <div id="sugarBar" class="bg-purple-500 h-2 rounded-full progress-bar" style="width: 0%"></div>
+                    <div class="bg-surface rounded-2xl p-4 border border-gray-800 shadow-sm">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-purple-400 font-bold text-sm">Sugars</span>
+                            <span class="text-[10px] text-gray-400">Add: <span id="sugarAddGoal">36</span>g</span>
+                        </div>
+                        <div class="flex justify-between items-end text-[10px] text-gray-500 mb-1.5 font-medium">
+                            <span>Nat: <span id="sugarNatCurrent" class="text-gray-300">0</span>g</span>
+                            <span>Add: <span id="sugarAddCurrent" class="text-white text-xs">0</span>g</span>
+                        </div>
+                        <div class="w-full bg-dark rounded-full h-2.5 shadow-inner overflow-hidden">
+                            <div id="sugarAddBar" class="bg-gradient-to-r from-purple-600 to-purple-400 h-full rounded-full progress-bar" style="width: 0%"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Biometrics Input -->
-            <div class="bg-surface rounded-2xl p-4 border border-gray-800 flex gap-4">
-                <div class="flex-1">
-                    <label class="text-xs text-gray-400 block mb-1"><i class="fas fa-shoe-prints mr-1"></i> Steps Today</label>
-                    <input type="number" id="stepInput" placeholder="e.g. 5000" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-primary transition-colors" onchange="window.updateSteps()">
+            <!-- Water Input -->
+            <div class="bg-surface rounded-3xl p-5 border border-gray-800 shadow-lg animate-slide-up relative overflow-hidden" style="animation-delay: 0.2s;">
+                <div class="absolute -right-10 -bottom-10 opacity-5 text-blue-500 pointer-events-none"><i class="fas fa-tint text-9xl"></i></div>
+                <div class="flex justify-between items-center mb-4 relative z-10">
+                    <label class="text-sm font-bold flex items-center"><i class="fas fa-tint text-blue-400 mr-2 drop-shadow-md"></i> Hydration</label>
+                    <span class="text-sm font-black text-blue-400 bg-blue-900/30 px-3 py-1 rounded-lg border border-blue-800/50"><span id="waterCurrent">0</span> / 3000ml</span>
                 </div>
-                <div class="flex-1">
-                    <label class="text-xs text-gray-400 block mb-1"><i class="fas fa-weight mr-1"></i> Log Weight (kg)</label>
-                    <input type="number" step="0.1" id="weightInput" placeholder="e.g. 85.5" class="w-full bg-dark border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-primary transition-colors" onchange="window.updateWeight()">
+                <div class="flex items-center gap-4 relative z-10">
+                    <button onclick="window.addWater(-250)" class="w-12 h-12 rounded-full bg-dark flex items-center justify-center text-gray-400 border border-gray-700 hover:text-white transition-colors active:scale-95 shadow-sm"><i class="fas fa-minus text-xs"></i></button>
+                    <div class="flex-1 bg-dark rounded-full h-6 overflow-hidden relative border border-gray-800 shadow-inner p-1">
+                        <div id="waterBar" class="bg-gradient-to-r from-blue-600 via-blue-400 to-cyan-400 h-full rounded-full progress-bar absolute left-1 top-1 shadow-[0_0_15px_rgba(59,130,246,0.6)]" style="width: 0%; height: calc(100% - 8px);"></div>
+                    </div>
+                    <button onclick="window.addWater(250)" class="w-12 h-12 rounded-full bg-dark flex items-center justify-center text-blue-400 border border-blue-900 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:bg-blue-900/20 transition-all active:scale-95"><i class="fas fa-plus text-xs"></i></button>
+                </div>
+            </div>
+
+            <!-- Micronutrients Grid -->
+            <div class="animate-slide-up" style="animation-delay: 0.3s;">
+                <h3 class="text-[11px] font-bold text-gray-500 mb-3 tracking-widest uppercase px-1 flex items-center gap-2">
+                    <i class="fas fa-microscope text-gray-600"></i> Micronutrients & Vitamins
+                </h3>
+                <div class="grid grid-cols-2 gap-2" id="microContainer">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================== -->
+        <!-- TAB 2: DIARY -->
+        <!-- ============================================== -->
+        <main id="tabDiary" class="flex-1 p-4 space-y-6 pb-48 overflow-y-auto hidden">
+            <!-- AI Insights -->
+            <div class="border border-gray-700 rounded-3xl bg-gradient-to-b from-surfaceLight to-surface overflow-hidden shadow-2xl relative">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-secondary via-blue-400 to-primary"></div>
+                <div class="p-4 border-b border-gray-800 flex justify-between items-center bg-surface/50">
+                    <h2 class="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-secondary to-blue-400 flex items-center">
+                        <i class="fas fa-robot mr-2 text-secondary drop-shadow-md"></i> AI Analysis
+                    </h2>
+                    <span id="coachStatusBadge" class="text-[9px] uppercase tracking-wider bg-dark text-gray-500 px-2 py-1 rounded-md font-bold border border-gray-700 shadow-inner">Waiting</span>
+                </div>
+
+                <div class="p-5" id="coachSectionContent">
+                    <div id="coachEmptyState" class="text-center py-8">
+                        <div class="w-16 h-16 rounded-full bg-dark flex items-center justify-center mx-auto mb-4 border border-gray-800 shadow-inner">
+                            <i class="fas fa-utensils text-2xl text-gray-600"></i>
+                        </div>
+                        <p class="text-sm text-gray-400 font-medium">Log your first meal to trigger the AI analysis.</p>
+                    </div>
+
+                    <div id="coachLoadingState" class="hidden space-y-4">
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <div class="loader w-4 h-4 border-[2px]"></div>
+                            <p class="text-xs text-secondary font-bold uppercase tracking-widest">Analyzing logs...</p>
+                        </div>
+                        <div class="h-16 rounded-2xl coach-shimmer border border-gray-800"></div>
+                        <div class="h-24 rounded-2xl coach-shimmer border border-gray-800"></div>
+                    </div>
+
+                    <div id="coachPopulatedState" class="hidden space-y-5">
+                        <div>
+                            <h3 class="text-[10px] font-bold text-gray-500 mb-2 tracking-widest uppercase flex items-center gap-1"><i class="fas fa-comment-dots text-gray-600"></i> Feedback</h3>
+                            <div class="bg-dark p-4 rounded-2xl border border-gray-700 shadow-inner text-sm text-gray-200 leading-relaxed font-medium" id="coachFeedback"></div>
+                        </div>
+                        <div>
+                            <h3 class="text-[10px] font-bold text-gray-500 mb-2 tracking-widest uppercase flex justify-between items-center">
+                                <span class="flex items-center gap-1"><i class="fas fa-exchange-alt text-gray-600"></i> Smart Swap</span>
+                                <span class="text-secondary bg-secondary/10 px-2 py-0.5 rounded text-[9px] truncate max-w-[120px]" id="coachTargetMeal"></span>
+                            </h3>
+                            <div class="bg-gradient-to-br from-dark to-surface p-4 rounded-2xl border border-secondary/30 shadow-[0_0_15px_rgba(3,218,198,0.1)] relative overflow-hidden group">
+                                <div class="absolute -right-4 -top-4 text-6xl text-secondary opacity-5"><i class="fas fa-leaf"></i></div>
+                                <div class="text-sm text-white mb-3 font-bold relative z-10 pr-6 leading-snug" id="coachCleanAlt"></div>
+                                <div class="inline-block bg-surface border border-secondary/50 px-3 py-1.5 rounded-lg text-xs font-black text-secondary relative z-10 shadow-md tracking-wide" id="coachAltMacros"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Food Log List -->
-            <div class="mt-6">
-                <h3 class="text-lg font-bold mb-3 flex items-center justify-between">
-                    Today's Logs
-                    <button class="text-xs text-gray-400 py-1 px-2 rounded hover:bg-gray-800" onclick="window.clearLogs()">Clear All</button>
+            <div class="mt-8">
+                <h3 class="text-sm font-black mb-4 flex items-center justify-between uppercase tracking-wider text-gray-300">
+                    <span><i class="fas fa-list-ul mr-2 text-gray-500"></i> Today's Log</span>
+                    <button class="text-[10px] text-error font-bold py-1.5 px-3 rounded-lg border border-error/30 bg-error/10 hover:bg-error/20 transition-colors" onclick="window.confirmClearLogs()">CLEAR ALL</button>
                 </h3>
-                <div id="logContainer" class="space-y-3 pb-10">
-                    <div class="text-center text-gray-500 text-sm py-4 italic" id="emptyLogMsg">No food logged today.</div>
-                </div>
-            </div>
-
-        </main>
-
-        <!-- Fixed Bottom Input Area -->
-        <div class="fixed bottom-0 left-0 right-0 glass-panel border-t border-gray-800 p-4 pb-safe sm:max-w-md sm:mx-auto">
-            <div id="imagePreviewContainer" class="hidden mb-2 relative inline-block">
-                <img id="imagePreview" src="" class="h-20 w-20 object-cover rounded-lg border border-gray-600">
-                <button onclick="window.clearImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            
-            <div class="flex items-end gap-2">
-                <div class="relative flex-1">
-                    <textarea id="foodInput" rows="1" class="w-full bg-surface border border-gray-700 rounded-2xl py-3 pl-4 pr-12 text-white outline-none focus:border-primary transition-colors resize-none overflow-hidden" placeholder="Describe food..." oninput="window.autoResize(this)"></textarea>
-                    
-                    <input type="file" id="cameraInput" accept="image/*" class="hidden" onchange="window.handleImageSelection(event)">
-                    <button onclick="document.getElementById('cameraInput').click()" class="absolute right-2 bottom-2 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-primary transition-colors">
-                        <i class="fas fa-camera text-lg"></i>
-                    </button>
-                </div>
-                <button id="submitBtn" onclick="window.logFood()" class="bg-primary text-dark rounded-2xl h-[46px] px-5 font-bold flex items-center justify-center hover:bg-opacity-90 transition-all shadow-[0_0_15px_rgba(187,134,252,0.3)]">
-                    <i class="fas fa-paper-plane" id="submitIcon"></i>
-                    <div class="loader hidden" id="submitLoader"></div>
-                </button>
-            </div>
-            <div id="apiErrorMsg" class="text-error text-xs mt-2 hidden text-center"></div>
-        </div>
-
-        <!-- Settings / Profile Setup Modal -->
-        <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex-col justify-end">
-            <div class="bg-surface rounded-t-3xl p-6 transform transition-transform border-t border-gray-700 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold">Personal Profile</h2>
-                    <button onclick="window.hideSettings()" id="closeSettingsBtn" class="text-gray-400"><i class="fas fa-times text-xl"></i></button>
-                </div>
-                
-                <p class="text-xs text-gray-400 mb-4">We use the Mifflin-St Jeor equation to calculate your precise metabolic rate and tailor your macros to your specific goal.</p>
-                
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs text-gray-400">Age</label>
-                            <input type="number" id="profAge" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400">Gender</label>
-                            <select id="profGender" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400">Height (cm)</label>
-                            <input type="number" id="profHeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
-                        </div>
-                        <div>
-                            <label class="text-xs text-gray-400">Weight (kg)</label>
-                            <input type="number" step="0.1" id="profWeight" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" oninput="window.liveCalculate()">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-xs text-gray-400">Activity Level</label>
-                        <select id="profActivity" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
-                            <option value="1.2">Sedentary (Office job, no exercise)</option>
-                            <option value="1.375">Lightly Active (Exercise 1-3 days/wk)</option>
-                            <option value="1.55">Moderately Active (Exercise 3-5 days/wk)</option>
-                            <option value="1.725">Very Active (Exercise 6-7 days/wk)</option>
-                            <option value="1.9">Extra Active (Physical job + training)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="text-xs text-gray-400">Primary Goal</label>
-                        <select id="profGoal" class="w-full bg-dark border border-gray-700 rounded-xl p-3 mt-1 text-white outline-none focus:border-secondary" onchange="window.liveCalculate()">
-                            <option value="cut">Lose Weight (Caloric Deficit)</option>
-                            <option value="maintain">Maintain Weight</option>
-                            <option value="bulk">Build Muscle (Caloric Surplus)</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Live Preview Box -->
-                    <div class="bg-dark p-4 rounded-2xl border border-gray-700 mt-4 shadow-inner">
-                        <div class="text-xs text-secondary font-medium text-center mb-3 tracking-widest uppercase">Target Daily Macros</div>
-                        <div class="flex justify-around text-center">
-                            <div><div class="font-bold text-white text-lg" id="calcCals">-</div><div class="text-[10px] text-gray-500">Cals</div></div>
-                            <div><div class="font-bold text-blue-400 text-lg" id="calcPro">-</div><div class="text-[10px] text-gray-500">Pro</div></div>
-                            <div><div class="font-bold text-yellow-400 text-lg" id="calcCarb">-</div><div class="text-[10px] text-gray-500">Carb</div></div>
-                            <div><div class="font-bold text-red-400 text-lg" id="calcFat">-</div><div class="text-[10px] text-gray-500">Fat</div></div>
-                        </div>
-                    </div>
-
-                    <button onclick="window.saveSettings()" class="w-full bg-secondary text-dark font-bold py-4 rounded-xl mt-4 text-lg shadow-[0_0_15px_rgba(3,218,198,0.3)]">Calculate & Save Profile</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Result Modal (For Food Logging) -->
-        <div id="resultModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden items-center justify-center p-4">
-            <div class="bg-surface border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
-                <h3 class="text-lg font-bold mb-4 border-b border-gray-700 pb-2">Detected Macros</h3>
-                <div class="space-y-3 mb-6" id="detectedMacrosList">
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="window.closeResultModal(false)" class="flex-1 py-3 rounded-xl border border-gray-600 text-gray-300 font-medium">Cancel</button>
-                    <button onclick="window.closeResultModal(true)" class="flex-1 py-3 rounded-xl bg-primary text-dark font-bold shadow-lg">Confirm & Add</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Application Logic and Firebase Integration -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Environment Variables
-        const apiKey = ""; 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        // Firebase Init
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        // App State
-        let userId = null;
-        let unsubscribeProfile = null;
-        let unsubscribeGoals = null;
-        let unsubscribeToday = null;
-
-        const state = {
-            profile: {
-                age: null, gender: 'male', height: null, weight: null, activityLevel: '1.2', goal: 'maintain', setupComplete: false
-            },
-            goals: {
-                calories: 2000, protein: 150, carbs: 150, fats: 60, addedSugar: 30
-            },
-            current: { steps: 0, weight: null },
-            logs: []
-        };
-
-        let currentPendingFood = null;
-        let currentBase64Image = null;
-
-        // Utils
-        const getTodayStr = () => {
-            const d = new Date();
-            return new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        };
-        
-        function indicateSync() {
-            const icon = document.getElementById('syncIcon');
-            icon.classList.add('text-primary');
-            icon.classList.remove('text-secondary', 'opacity-50');
-            setTimeout(() => {
-                icon.classList.remove('text-primary');
-                icon.classList.add('text-secondary', 'opacity-50');
-            }, 1000);
-        }
-
-        // Setup UI
-        document.addEventListener('DOMContentLoaded', () => {
-            const options = { weekday: 'long', month: 'short', day: 'numeric' };
-            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
-            const tx = document.getElementById('foodInput');
-            tx.setAttribute('style', 'height:' + (tx.scrollHeight) + 'px;overflow-y:hidden;');
-        });
-
-        // Authentication & Listeners
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth Error:", err);
-            }
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                userId = user.uid;
-                setupListeners();
-            }
-        });
-
-        function setupListeners() {
-            i
+                <div id="logContainer" class="space-y-3 pb-2">
+                    <div class="text-center text-gray-500 text-sm py-10 bg-surface rounded-2xl border border-gray-800 border-dashed" id="emptyLogMsg">
+                        <p class="italic">Nothing logged today yet.</p>
+          
